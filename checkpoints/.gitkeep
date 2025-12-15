@@ -1,0 +1,7 @@
+# Checkpoints Directory
+This directory stores model checkpoints during training.
+
+Files saved here:
+- `latest_mbpo.pt` - Most recent checkpoint
+- `best_mbpo.pt` - Best performing model
+- `final_mbpo.pt` - Final model when target reached

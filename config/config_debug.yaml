@@ -1,0 +1,101 @@
+# =============================================================================
+# MBPO-Breakout Configuration
+# =============================================================================
+# Model-Based Policy Optimization for BreakoutNoFrameskip-v4
+# CMPS458 - Reinforcement Learning Project
+# =============================================================================
+
+# Environment Configuration
+env:
+  name: "BreakoutNoFrameskip-v4"
+  num_envs: 4 # Number of parallel environments
+  frame_stack: 4 # Number of stacked frames
+  frame_size: 84 # Observation size (84x84)
+  noop_max: 30 # Max no-op actions at reset
+  frame_skip: 4 # Frames to skip with max pooling
+  record_video: true # Enable video recording
+  video_trigger_freq: 50 # Record every N episodes
+  video_dir: "videos" # Video output directory
+
+# Training Configuration
+training:
+  total_timesteps: 10_000_000 # Total environment steps
+  buffer_size: 1_000_000 # Replay buffer capacity
+  batch_size: 256 # Batch size for updates
+  learning_starts: 0.0005 # Steps before training starts
+  gamma: 0.99 # Discount factor
+  tau: 0.005 # Soft update coefficient
+
+  # Learning rates
+  policy_lr: 3e-4 # Policy network learning rate
+  dynamics_lr: 1e-4 # Dynamics model learning rate
+
+  # MBPO specific
+  model_rollout_freq: 250 # Steps between model rollouts
+  model_rollout_length: 1 # Horizon for model rollouts
+  model_rollout_batch_size: 100_000 # Batch size for model rollouts
+  real_ratio: 0.05 # Ratio of real vs model data
+
+  # Update frequencies
+  train_freq: 4 # Environment steps between updates
+  gradient_steps: 1 # Gradient steps per update
+  target_update_freq: 10_000 # Steps between target network updates
+
+# Model Configuration
+model:
+  # Nature CNN Architecture
+  cnn_channels: [ 32, 64, 64 ] # Conv layer output channels
+  cnn_kernels: [ 8, 4, 3 ] # Conv layer kernel sizes
+  cnn_strides: [ 4, 2, 1 ] # Conv layer strides
+  fc_dim: 512 # Fully connected layer dimension
+
+  # Dynamics Ensemble (MBPO Core)
+  ensemble_size: 5 # Number of dynamics models
+  dynamics_hidden_dim: 256 # Hidden dimension for dynamics
+  predict_reward: true # Whether to predict rewards
+
+# Early Stopping
+early_stopping:
+  enabled: true
+  target_reward: 400.0 # Stop when mean reward reaches this
+  window_size: 100 # Window for computing mean reward
+  patience: 50 # Episodes without improvement before stop
+
+# Logging & Checkpoints
+logging:
+  log_freq: 1000 # Steps between logging
+  save_freq: 100_000 # Steps between checkpoints
+  checkpoint_dir: "checkpoints"
+
+# Wandb Configuration
+wandb:
+  enabled: true
+  project: "MBPO-Breakout"
+  entity: null # Set to your wandb username/team
+  tags: [ "mbpo", "breakout", "mbrl" ]
+
+# Algorithm Selection (supports modularity)
+algorithm: "mbpo" # Options: "mbpo", "ppo", "sac", "ddqn"
+
+# Algorithm-specific configs
+ppo:
+  clip_range: 0.2
+  ent_coef: 0.01
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  n_epochs: 10
+  gae_lambda: 0.95
+
+sac:
+  ent_coef: "auto"
+  target_entropy: "auto"
+  init_temperature: 0.2
+
+ddqn:
+  epsilon_start: 1.0
+  epsilon_end: 0.01
+  epsilon_decay: 0.995
+  double_dqn: true
+
+# Seed for reproducibility
+seed: 42

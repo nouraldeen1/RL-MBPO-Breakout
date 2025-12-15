@@ -1,0 +1,6 @@
+# Videos Directory
+This directory stores recorded episode videos.
+
+Subdirectories:
+- `./` - Training videos (recorded every 50 episodes)
+- `./eval/` - Evaluation videos (all episodes)

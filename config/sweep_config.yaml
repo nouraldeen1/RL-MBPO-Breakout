@@ -1,0 +1,66 @@
+# =============================================================================
+# Wandb Sweep Configuration for Bayesian Optimization
+# =============================================================================
+# Run with: wandb sweep config/sweep_config.yaml
+# Then: wandb agent <sweep_id>
+# =============================================================================
+
+program: main.py
+method: bayes
+metric:
+  name: eval/mean_reward
+  goal: maximize
+
+parameters:
+  # Learning rates (log uniform for better exploration)
+  policy_lr:
+    distribution: log_uniform_values
+    min: 1e-5
+    max: 1e-3
+
+  dynamics_lr:
+    distribution: log_uniform_values
+    min: 1e-5
+    max: 1e-3
+
+  # Discount factor
+  gamma:
+    values: [ 0.95, 0.99, 0.995 ]
+
+  # Batch size
+  batch_size:
+    values: [ 64, 128, 256, 512 ]
+
+  # MBPO specific parameters
+  model_rollout_length:
+    values: [ 1, 2, 3, 5 ]
+
+  real_ratio:
+    distribution: uniform
+    min: 0.01
+    max: 0.2
+
+  ensemble_size:
+    values: [ 3, 5, 7 ]
+
+  # Soft update coefficient
+  tau:
+    distribution: log_uniform_values
+    min: 0.001
+    max: 0.01
+
+  # Network architecture
+  fc_dim:
+    values: [ 256, 512, 1024 ]
+
+early_terminate:
+  type: hyperband
+  min_iter: 100000
+  eta: 3
+
+command:
+- ${env}
+- python
+- ${program}
+- --sweep
+- ${args}
