@@ -556,7 +556,27 @@ class AverageMeter:
         self.values: deque = deque(maxlen=window_size)
     
     def update(self, value: float) -> None:
-        self.values.append(value)
+        """Append a numeric value to the meter, converting tensors to floats.
+
+        This ensures CUDA tensors are moved to CPU and converted to Python floats
+        before being stored (prevents numpy from trying to convert CUDA tensors).
+        """
+        # Convert torch tensors (including CUDA) to Python float
+        if isinstance(value, torch.Tensor):
+            try:
+                v = float(value.detach().cpu().item())
+            except Exception:
+                # Fallback: convert to CPU then to float
+                v = float(value.detach().cpu().numpy())
+        else:
+            # Numpy scalars or Python numbers -> float
+            try:
+                v = float(value)
+            except Exception:
+                # As a last resort, store 0.0
+                v = 0.0
+
+        self.values.append(v)
     
     def mean(self) -> float:
         if not self.values:
