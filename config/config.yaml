@@ -18,12 +18,16 @@ env:
   video_dir: "videos" # Video output directory
 
 # Training Configuration
+debug:
+  action_debug_steps: 10000
+  action_log_freq: 1000
+
 training:
   total_timesteps: 1_000_000 # Total environment steps
   buffer_size: 500_000 # Replay buffer capacity
   batch_size: 256 # Batch size for updates
-  learning_starts: 50_000
- # Steps before training starts
+  learning_starts: 50_000 # Steps before training starts (was 50k - too high!)
+  # Steps before training starts
   gamma: 0.99 # Discount factor
   tau: 0.005 # Soft update coefficient
 
@@ -60,7 +64,7 @@ early_stopping:
   enabled: false
   target_reward: 400.0 # Stop when mean reward reaches this
   window_size: 100 # Window for computing mean reward
-  patience: 4000 # Episodes without improvement before stop
+  patience: 50000 # Episodes without improvement before stop
 
 # Logging & Checkpoints
 logging:
@@ -81,7 +85,7 @@ algorithm: "mbpo" # Options: "mbpo", "ppo", "sac", "ddqn"
 # Algorithm-specific configs
 ppo:
   clip_range: 0.2
-  ent_coef: 0.01
+  ent_coef: 0.02
   vf_coef: 0.5
   max_grad_norm: 0.5
   n_epochs: 10

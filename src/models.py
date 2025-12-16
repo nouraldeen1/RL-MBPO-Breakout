@@ -395,15 +395,20 @@ class DynamicsModel(nn.Module):
         )
         
         # Delta state decoder (deconvolution to reconstruct delta)
+        # Reverse the NatureCNN encoder path exactly: 7 -> 9 -> 20 -> 84
+        # ConvTranspose formula: out = (in-1)*stride - 2*padding + kernel + output_padding
         self.delta_decoder = nn.Sequential(
             nn.Linear(hidden_dim, 64 * 7 * 7),
             nn.ReLU(),
             nn.Unflatten(1, (64, 7, 7)),
-            nn.ConvTranspose2d(64, 64, 3, stride=1),  # 7 -> 9
+            # Layer 1: 7 -> 9. (7-1)*1 - 2*0 + 3 + 0 = 9.
+            nn.ConvTranspose2d(64, 64, kernel_size=3, stride=1, padding=0),
             nn.ReLU(),
-            nn.ConvTranspose2d(64, 32, 4, stride=2),  # 9 -> 20
+            # Layer 2: 9 -> 20. (9-1)*2 - 2*0 + 4 + 0 = 20.
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=0),
             nn.ReLU(),
-            nn.ConvTranspose2d(32, in_channels, 8, stride=4, output_padding=2),  # 20 -> 84
+            # Layer 3: 20 -> 84. (20-1)*4 - 2*0 + 8 + 0 = 84.
+            nn.ConvTranspose2d(32, in_channels, kernel_size=8, stride=4, padding=0),
         )
         
         # Reward predictor

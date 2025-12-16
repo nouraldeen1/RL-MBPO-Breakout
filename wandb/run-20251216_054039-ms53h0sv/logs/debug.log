@@ -9,3 +9,93 @@
 2025-12-16 05:40:39,952 INFO    MainThread:27720 [wandb_init.py:init():845] wandb.init called with sweep_config: {}
 config: {'env': {'name': 'BreakoutNoFrameskip-v4', 'num_envs': 4, 'frame_stack': 4, 'frame_size': 84, 'noop_max': 30, 'frame_skip': 4, 'record_video': True, 'video_trigger_freq': 100, 'video_dir': 'videos'}, 'training': {'total_timesteps': 1000000, 'buffer_size': 500000, 'batch_size': 256, 'learning_starts': 50000, 'gamma': 0.99, 'tau': 0.005, 'policy_lr': '3e-4', 'dynamics_lr': '1e-4', 'model_rollout_freq': 1000, 'model_rollout_length': 1, 'model_rollout_batch_size': 20000, 'real_ratio': 0.05, 'train_freq': 4, 'gradient_steps': 1, 'target_update_freq': 10000}, 'model': {'cnn_channels': [32, 64, 64], 'cnn_kernels': [8, 4, 3], 'cnn_strides': [4, 2, 1], 'fc_dim': 512, 'ensemble_size': 5, 'dynamics_hidden_dim': 256, 'predict_reward': True}, 'early_stopping': {'enabled': False, 'target_reward': 400.0, 'window_size': 100, 'patience': 4000}, 'logging': {'log_freq': 1000, 'save_freq': 100000, 'checkpoint_dir': 'checkpoints'}, 'wandb': {'enabled': True, 'project': 'MBPO-Breakout', 'entity': None, 'tags': ['mbpo', 'breakout', 'mbrl']}, 'algorithm': 'mbpo', 'ppo': {'clip_range': 0.2, 'ent_coef': 0.01, 'vf_coef': 0.5, 'max_grad_norm': 0.5, 'n_epochs': 10, 'gae_lambda': 0.95}, 'sac': {'ent_coef': 'auto', 'target_entropy': 'auto', 'init_temperature': 0.2}, 'ddqn': {'epsilon_start': 1.0, 'epsilon_end': 0.01, 'epsilon_decay': 0.995, 'double_dqn': True}, 'seed': 42, '_wandb': {}}
 2025-12-16 05:40:39,952 INFO    MainThread:27720 [wandb_init.py:init():888] starting backend
+2025-12-16 05:40:42,426 INFO    MainThread:27720 [wandb_init.py:init():891] sending inform_init request
+2025-12-16 05:40:42,847 INFO    MainThread:27720 [wandb_init.py:init():899] backend started and connected
+2025-12-16 05:40:42,851 INFO    MainThread:27720 [wandb_init.py:init():969] updated telemetry
+2025-12-16 05:40:42,952 INFO    MainThread:27720 [wandb_init.py:init():993] communicating run to backend with 90.0 second timeout
+2025-12-16 05:40:43,841 INFO    MainThread:27720 [wandb_init.py:init():1040] starting run threads in backend
+2025-12-16 05:40:44,106 INFO    MainThread:27720 [wandb_run.py:_console_start():2504] atexit reg
+2025-12-16 05:40:44,106 INFO    MainThread:27720 [wandb_run.py:_redirect():2352] redirect: wrap_raw
+2025-12-16 05:40:44,107 INFO    MainThread:27720 [wandb_run.py:_redirect():2421] Wrapping output streams.
+2025-12-16 05:40:44,107 INFO    MainThread:27720 [wandb_run.py:_redirect():2444] Redirects installed.
+2025-12-16 05:40:44,112 INFO    MainThread:27720 [wandb_init.py:init():1080] run started, returning control to user process
+2025-12-16 05:41:28,074 INFO    wandb-AsyncioManager-main:27720 [service_client.py:_forward_responses():80] Reached EOF.
+2025-12-16 05:41:28,074 INFO    wandb-AsyncioManager-main:27720 [mailbox.py:close():137] Closing mailbox, abandoning 1 handles.
+2025-12-16 05:41:29,861 ERROR   wandb-AsyncioManager-main:27720 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\service\service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\service\service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.8_3.8.2800.0_x64__qbz5n2kfra8p0\lib\asyncio\streams.py", line 387, in drain
+    await self._protocol._drain_helper()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.8_3.8.2800.0_x64__qbz5n2kfra8p0\lib\asyncio\streams.py", line 190, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2025-12-16 05:41:29,865 ERROR   wandb-AsyncioManager-main:27720 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\service\service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\service\service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.8_3.8.2800.0_x64__qbz5n2kfra8p0\lib\asyncio\streams.py", line 387, in drain
+    await self._protocol._drain_helper()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.8_3.8.2800.0_x64__qbz5n2kfra8p0\lib\asyncio\streams.py", line 190, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2025-12-16 05:41:29,867 ERROR   wandb-AsyncioManager-main:27720 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\service\service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\service\service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.8_3.8.2800.0_x64__qbz5n2kfra8p0\lib\asyncio\streams.py", line 387, in drain
+    await self._protocol._drain_helper()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.8_3.8.2800.0_x64__qbz5n2kfra8p0\lib\asyncio\streams.py", line 190, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2025-12-16 05:41:29,874 ERROR   wandb-AsyncioManager-main:27720 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\service\service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\service\service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.8_3.8.2800.0_x64__qbz5n2kfra8p0\lib\asyncio\streams.py", line 387, in drain
+    await self._protocol._drain_helper()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.8_3.8.2800.0_x64__qbz5n2kfra8p0\lib\asyncio\streams.py", line 190, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2025-12-16 05:41:29,875 ERROR   wandb-AsyncioManager-main:27720 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\service\service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\service\service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.8_3.8.2800.0_x64__qbz5n2kfra8p0\lib\asyncio\streams.py", line 387, in drain
+    await self._protocol._drain_helper()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.8_3.8.2800.0_x64__qbz5n2kfra8p0\lib\asyncio\streams.py", line 190, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2025-12-16 05:41:29,878 ERROR   wandb-AsyncioManager-main:27720 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\service\service_client.py", line 38, in publish
+    await self._send_server_request(request)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\wandb\sdk\lib\service\service_client.py", line 64, in _send_server_request
+    await self._writer.drain()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.8_3.8.2800.0_x64__qbz5n2kfra8p0\lib\asyncio\streams.py", line 387, in drain
+    await self._protocol._drain_helper()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.8_3.8.2800.0_x64__qbz5n2kfra8p0\lib\asyncio\streams.py", line 190, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost

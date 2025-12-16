@@ -145,6 +145,8 @@ class MBPOAgent:
         """
         with torch.no_grad():
             state_tensor = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
+            # Get raw logits for debugging
+            logits, _ = self.actor_critic.forward(state_tensor)
             action, log_prob, entropy, value = self.actor_critic.get_action_and_value(
                 state_tensor, deterministic=deterministic
             )
@@ -153,6 +155,7 @@ class MBPOAgent:
             "log_prob": log_prob.cpu().item(),
             "value": value.cpu().item(),
             "entropy": entropy.cpu().item(),
+            "logits_std": logits.std().cpu().item(),  # Detect flat logits
         }
     
     def store_transition(
@@ -213,7 +216,8 @@ class MBPOAgent:
         Returns:
             Number of transitions generated
         """
-        if not self.dynamics_trained or not self.real_buffer.is_ready(self.batch_size):
+        # Don't generate rollouts until we have enough real data AND dynamics is trained
+        if not self.dynamics_trained or not self.real_buffer.is_ready(self.batch_size * 10):
             return 0
         
         # Sample initial states from real buffer
@@ -299,12 +303,21 @@ class MBPOAgent:
             torch.nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
             self.policy_optimizer.step()
             
-            # Collect metrics
+            # Collect metrics including gradient norms for debugging
+            total_grad_norm = 0.0
+            for p in self.actor_critic.parameters():
+                if p.grad is not None:
+                    total_grad_norm += p.grad.data.norm(2).item() ** 2
+            total_grad_norm = total_grad_norm ** 0.5
+            
             metrics = {
                 "policy/loss": policy_loss.item(),
                 "policy/value_loss": value_loss.item(),
                 "policy/entropy": -entropy_loss.item(),
                 "policy/total_loss": loss.item(),
+                "policy/grad_norm": total_grad_norm,
+                "policy/mean_advantage": advantages.mean().item(),
+                "policy/mean_value": values.mean().item(),
             }
             
             for k, v in metrics.items():

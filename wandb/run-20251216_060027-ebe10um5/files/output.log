@@ -1,0 +1,56 @@
+wandb: Detected [agents] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+
+Starting training for 1,000,000 timesteps...
+============================================================
+[ActionDebug] Step 0: {'action/0': 4, 'action/1': 0, 'action/2': 0, 'action/3': 0}
+[Training] Step 1000: policy_loss=0.0003, grad_norm=0.5000, entropy=1.3863
+Step:      1,000 | Episodes:     29 | Mean Reward (100):    0.17 | Best:    -inf
+[ActionDebug] Step 1000: {'action/0': 252, 'action/1': 244, 'action/2': 252, 'action/3': 256}
+[Training] Step 1100: policy_loss=-0.0054, grad_norm=0.1603, entropy=1.3672
+[Training] Step 1200: policy_loss=-0.2091, grad_norm=0.5000, entropy=0.0719
+[Training] Step 1300: policy_loss=-0.0344, grad_norm=0.5000, entropy=0.3493
+[Training] Step 1400: policy_loss=-0.2868, grad_norm=0.5000, entropy=0.5641
+[Training] Step 1500: policy_loss=-0.5361, grad_norm=0.5000, entropy=0.4262
+[Training] Step 1600: policy_loss=0.0985, grad_norm=0.5000, entropy=0.0163
+[Training] Step 1700: policy_loss=0.0003, grad_norm=0.5000, entropy=0.0010
+[Training] Step 1800: policy_loss=0.5482, grad_norm=0.5000, entropy=0.0000
+[Training] Step 1900: policy_loss=-0.5691, grad_norm=0.5000, entropy=0.0155
+[Training] Step 2000: policy_loss=-0.0044, grad_norm=0.5000, entropy=0.6632
+Step:      2,000 | Episodes:     66 | Mean Reward (100):    0.15 | Best:    -inf
+[ActionDebug] Step 2000: {'action/0': 282, 'action/1': 901, 'action/2': 285, 'action/3': 536}
+[Training] Step 2100: policy_loss=-0.0069, grad_norm=0.5000, entropy=1.1276
+[Training] Step 2200: policy_loss=0.1153, grad_norm=0.5000, entropy=1.0972
+[Training] Step 2300: policy_loss=-0.2002, grad_norm=0.5000, entropy=0.6716
+[Training] Step 2400: policy_loss=0.0660, grad_norm=0.5000, entropy=0.5836
+[Training] Step 2500: policy_loss=0.0817, grad_norm=0.5000, entropy=0.4489
+[Training] Step 2600: policy_loss=-0.0092, grad_norm=0.5000, entropy=0.4787
+Traceback (most recent call last):
+  File ".\src\main.py", line 509, in <module>
+    main()
+  File ".\src\main.py", line 505, in main
+    train(config, args)
+  File ".\src\main.py", line 363, in train
+    update_metrics = agent.update()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 342, in update
+    n_generated = self.generate_model_rollouts()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 246, in generate_model_rollouts
+    self.model_buffer.add_rollouts(
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\utils.py", line 216, in add_rollouts
+    states.cpu().numpy(),
+KeyboardInterrupt
+Traceback (most recent call last):
+  File ".\src\main.py", line 509, in <module>
+    main()
+  File ".\src\main.py", line 505, in main
+    train(config, args)
+  File ".\src\main.py", line 363, in train
+    update_metrics = agent.update()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 342, in update
+    n_generated = self.generate_model_rollouts()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 246, in generate_model_rollouts
+    self.model_buffer.add_rollouts(
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\utils.py", line 216, in add_rollouts
+    states.cpu().numpy(),
+KeyboardInterrupt

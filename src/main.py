@@ -63,6 +63,14 @@ def record_video_episode(config, agent, global_step, episode_idx: int, video_dir
 
     # Use a fresh local directory for this eval to avoid RecordVideo overwrite warnings
     local_video_dir = os.path.join(video_dir, f"eval-{episode_idx:06d}")
+    # Ensure the local video directory is fresh to avoid RecordVideo overwrite warnings
+    if os.path.exists(local_video_dir):
+        try:
+            import shutil
+            shutil.rmtree(local_video_dir)
+        except Exception:
+            # If we cannot remove, fallback to appending a timestamp
+            local_video_dir = os.path.join(video_dir, f"eval-{episode_idx:06d}-{int(time.time())}")
     env_fn = make_env(
         env_id=config.get("env", {}).get("name", "BreakoutNoFrameskip-v4"),
         seed=config.get("seed", 42),
@@ -256,6 +264,10 @@ def train(config: Dict, args: argparse.Namespace) -> float:
     best_mean_reward = float("-inf")
     
     last_video_episode = 0
+    # Action distribution debug counters
+    action_counts = np.zeros(num_actions, dtype=np.int64)
+    action_debug_steps = config.get("debug", {}).get("action_debug_steps", 10_000)
+    action_log_freq = config.get("debug", {}).get("action_log_freq", 1_000)
     while global_step < total_timesteps:
         # Get actions for all environments
         actions = []
@@ -263,6 +275,17 @@ def train(config: Dict, args: argparse.Namespace) -> float:
             action, action_info = agent.get_action(obs[i], deterministic=False)
             actions.append(action)
         actions = np.array(actions)
+
+        # Update action distribution counters (for debugging early bias)
+        if global_step < action_debug_steps:
+            # bincount over current parallel actions
+            counts = np.bincount(actions, minlength=num_actions)
+            action_counts[:len(counts)] += counts
+            if (global_step % action_log_freq) == 0 and use_wandb:
+                # Log the distribution to wandb and print
+                dist = {f"action/{i}": int(action_counts[i]) for i in range(num_actions)}
+                print(f"[ActionDebug] Step {global_step}: {dist}")
+                wandb.log({**dist, "debug/step": int(global_step)})
         
         # Step environment
         next_obs, rewards, terminateds, truncateds, infos = env.step(actions)
@@ -288,13 +311,15 @@ def train(config: Dict, args: argparse.Namespace) -> float:
                 should_stop = early_stopper.update(episode_rewards[i])
                 
                 if use_wandb:
-                    # Log per-episode metrics to Wandb using episode index as step
+                    # Log per-episode metrics to Wandb without specifying `step`.
+                    # Let wandb assign a logical ordering to avoid non-monotonic
+                    # step warnings when other code logs with `global_step`.
                     wandb.log({
                         "episode/reward": float(episode_rewards[i]),
                         "episode/length": int(episode_lengths[i]),
                         "episode/count": int(episode_count),
                         "episode/mean_reward_100": early_stopper.get_mean_reward(),
-                    }, step=episode_count)
+                    })
                 
                 if should_stop:
                     print(f"\n{'=' * 60}")
@@ -337,6 +362,13 @@ def train(config: Dict, args: argparse.Namespace) -> float:
             # Update agent
             update_metrics = agent.update()
             metrics_logger.update(update_metrics)
+            
+            # Debug: log first few updates to verify training is happening
+            if global_step <= learning_starts + 5000 and global_step % 100 == 0:
+                print(f"[Training] Step {global_step}: "
+                      f"policy_loss={update_metrics.get('policy/loss', 0):.4f}, "
+                      f"grad_norm={update_metrics.get('policy/grad_norm', 0):.4f}, "
+                      f"entropy={update_metrics.get('policy/entropy', 0):.4f}")
         
         # Model rollouts (for MBPO)
         if (algorithm == "mbpo" and 
@@ -349,9 +381,20 @@ def train(config: Dict, args: argparse.Namespace) -> float:
         # Logging
         if global_step % log_freq == 0:
             log_metrics = metrics_logger.get_means()
+
+            # Avoid logging episode-level metrics with `global_step`.
+            # Wandb requires each metric to be logged with monotonically
+            # increasing `step` values. Metrics produced per-episode use
+            # `episode_count` as their step; if we also log those same
+            # metric names here with `global_step` (which is larger) we
+            # can later attempt to write the same metric with a smaller
+            # step and get warnings. Filter out episode/* keys here so
+            # episode metrics are only logged at episode time.
+            log_metrics = {k: v for k, v in log_metrics.items() if not k.startswith("episode/")}
+
             log_metrics["train/global_step"] = global_step
             log_metrics["train/episodes"] = episode_count
-            
+
             if use_wandb:
                 wandb.log(log_metrics, step=global_step)
             
