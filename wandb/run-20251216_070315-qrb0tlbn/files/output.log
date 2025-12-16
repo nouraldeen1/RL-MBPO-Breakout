@@ -1,0 +1,57 @@
+wandb: Detected [agents] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+
+Starting training for 100,000 timesteps...
+============================================================
+[ActionDebug] Step 0: {'action/0': 4, 'action/1': 0, 'action/2': 0, 'action/3': 0}
+Step:      1,000 | Episodes:     31 | Mean Reward (100):    0.13 | Best:    -inf
+[ActionDebug] Step 1000: {'action/0': 253, 'action/1': 244, 'action/2': 251, 'action/3': 256}
+Step:      2,000 | Episodes:     60 | Mean Reward (100):    0.20 | Best:    -inf
+[ActionDebug] Step 2000: {'action/0': 509, 'action/1': 496, 'action/2': 512, 'action/3': 487}
+Step:      3,000 | Episodes:     86 | Mean Reward (100):    0.24 | Best:    -inf
+[ActionDebug] Step 3000: {'action/0': 748, 'action/1': 760, 'action/2': 778, 'action/3': 718}
+C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\gymnasium\wrappers\rendering.py:283: UserWarning: [33mWARN: Overwriting existing videos at D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\videos\eval-000100 folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)[0m
+  logger.warn(
+[Video] Saved episode video: videos\eval-episode-000100.mp4 (reward: 0.0)
+Step:      4,000 | Episodes:    111 | Mean Reward (100):    0.29 | Best:    0.29
+[ActionDebug] Step 4000: {'action/0': 987, 'action/1': 1004, 'action/2': 1031, 'action/3': 982}
+Step:      5,000 | Episodes:    139 | Mean Reward (100):    0.31 | Best:    0.33
+[ActionDebug] Step 5000: {'action/0': 1240, 'action/1': 1244, 'action/2': 1305, 'action/3': 1215}
+Step:      6,000 | Episodes:    174 | Mean Reward (100):    0.25 | Best:    0.33
+[ActionDebug] Step 6000: {'action/0': 1470, 'action/1': 1506, 'action/2': 1579, 'action/3': 1449}
+C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\gymnasium\wrappers\rendering.py:283: UserWarning: [33mWARN: Overwriting existing videos at D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\videos\eval-000200 folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)[0m
+  logger.warn(
+[Video] Saved episode video: videos\eval-episode-000200.mp4 (reward: 0.0)
+Step:      7,000 | Episodes:    206 | Mean Reward (100):    0.22 | Best:    0.33
+[ActionDebug] Step 7000: {'action/0': 1747, 'action/1': 1750, 'action/2': 1820, 'action/3': 1687}
+Step:      8,000 | Episodes:    241 | Mean Reward (100):    0.12 | Best:    0.33
+[ActionDebug] Step 8000: {'action/0': 1989, 'action/1': 2005, 'action/2': 2053, 'action/3': 1957}
+Step:      9,000 | Episodes:    268 | Mean Reward (100):    0.18 | Best:    0.33
+[ActionDebug] Step 9000: {'action/0': 2225, 'action/1': 2251, 'action/2': 2306, 'action/3': 2222}
+Traceback (most recent call last):
+  File ".\src\main.py", line 509, in <module>
+    main()
+  File ".\src\main.py", line 505, in main
+    train(config, args)
+  File ".\src\main.py", line 363, in train
+    update_metrics = agent.update()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 342, in update
+    n_generated = self.generate_model_rollouts()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 246, in generate_model_rollouts
+    self.model_buffer.add_rollouts(
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\utils.py", line 216, in add_rollouts
+KeyboardInterrupt
+Traceback (most recent call last):
+  File ".\src\main.py", line 509, in <module>
+    main()
+  File ".\src\main.py", line 505, in main
+    train(config, args)
+  File ".\src\main.py", line 363, in train
+    update_metrics = agent.update()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 342, in update
+    n_generated = self.generate_model_rollouts()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 246, in generate_model_rollouts
+    self.model_buffer.add_rollouts(
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\utils.py", line 216, in add_rollouts
+KeyboardInterrupt

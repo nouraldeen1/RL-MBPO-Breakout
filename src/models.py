@@ -398,17 +398,17 @@ class DynamicsModel(nn.Module):
         # Reverse the NatureCNN encoder path exactly: 7 -> 9 -> 20 -> 84
         # ConvTranspose formula: out = (in-1)*stride - 2*padding + kernel + output_padding
         self.delta_decoder = nn.Sequential(
-            nn.Linear(hidden_dim, 64 * 7 * 7),
+            nn.Linear(hidden_dim, 32 * 7 * 7), # Reduced channels
             nn.ReLU(),
-            nn.Unflatten(1, (64, 7, 7)),
+            nn.Unflatten(1, (32, 7, 7)),
             # Layer 1: 7 -> 9. (7-1)*1 - 2*0 + 3 + 0 = 9.
-            nn.ConvTranspose2d(64, 64, kernel_size=3, stride=1, padding=0),
+            nn.ConvTranspose2d(32, 32, kernel_size=3, stride=1, padding=0), # Reduced channels
             nn.ReLU(),
             # Layer 2: 9 -> 20. (9-1)*2 - 2*0 + 4 + 0 = 20.
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=0),
+            nn.ConvTranspose2d(32, 16, kernel_size=4, stride=2, padding=0), # Reduced channels
             nn.ReLU(),
             # Layer 3: 20 -> 84. (20-1)*4 - 2*0 + 8 + 0 = 84.
-            nn.ConvTranspose2d(32, in_channels, kernel_size=8, stride=4, padding=0),
+            nn.ConvTranspose2d(16, in_channels, kernel_size=8, stride=4, padding=0), # Reduced channels
         )
         
         # Reward predictor
@@ -611,29 +611,20 @@ class DynamicsEnsemble(nn.Module):
         if use_mean or model_idx is not None:
             mean_delta, mean_reward, std_delta = self.forward(state, action, model_idx)
             next_state = state + mean_delta
+            uncertainty = std_delta
         else:
-            # Randomly select a model for each sample (for exploration)
-            batch_size = state.shape[0]
-            model_indices = torch.randint(0, self.ensemble_size, (batch_size,))
-            
-            next_states = []
-            rewards = []
-            
-            for i in range(batch_size):
-                idx = model_indices[i].item()
-                delta, reward = self.models[idx](state[i:i+1], action[i:i+1])
-                next_states.append(state[i:i+1] + delta)
-                if reward is not None:
-                    rewards.append(reward)
-            
-            next_state = torch.cat(next_states, dim=0)
-            mean_reward = torch.cat(rewards, dim=0) if rewards else None
-            std_delta = None
+            # For low-VRAM GPUs, just use a single random model instead of
+            # the full ensemble. This avoids creating massive intermediate tensors.
+            random_model_idx = torch.randint(0, self.ensemble_size, (1,)).item()
+            delta, reward = self.models[random_model_idx](state, action)
+            next_state = state + delta
+            mean_reward = reward
+            uncertainty = None
         
         # Clamp to valid range
         next_state = torch.clamp(next_state, 0.0, 1.0)
         
-        return next_state, mean_reward, std_delta
+        return next_state, mean_reward, uncertainty
     
     def get_uncertainty(
         self,

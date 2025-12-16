@@ -1,0 +1,88 @@
+wandb: Detected [agents] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+
+Starting training for 100,000 timesteps...
+============================================================
+[ActionDebug] Step 0: {'action/0': 2, 'action/1': 0, 'action/2': 1, 'action/3': 1}
+Step:      1,000 | Episodes:     28 | Mean Reward (100):    0.21 | Best:    -inf
+[ActionDebug] Step 1000: {'action/0': 256, 'action/1': 231, 'action/2': 248, 'action/3': 269}
+Step:      2,000 | Episodes:     56 | Mean Reward (100):    0.23 | Best:    -inf
+[ActionDebug] Step 2000: {'action/0': 499, 'action/1': 451, 'action/2': 495, 'action/3': 559}
+Step:      3,000 | Episodes:     90 | Mean Reward (100):    0.21 | Best:    -inf
+[ActionDebug] Step 3000: {'action/0': 760, 'action/1': 681, 'action/2': 733, 'action/3': 830}
+C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\gymnasium\wrappers\rendering.py:283: UserWarning: [33mWARN: Overwriting existing videos at D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\videos\eval-000100 folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)[0m
+  logger.warn(
+[Video] Saved episode video: videos\eval-episode-000100.mp4 (reward: 0.0)
+Step:      4,000 | Episodes:    118 | Mean Reward (100):    0.23 | Best:    0.24
+[ActionDebug] Step 4000: {'action/0': 1030, 'action/1': 946, 'action/2': 961, 'action/3': 1067}
+[Training] Step 5000: policy_loss=0.0000, grad_norm=0.3829, entropy=1.3863
+Step:      5,000 | Episodes:    158 | Mean Reward (100):    0.15 | Best:    0.24
+[ActionDebug] Step 5000: {'action/0': 1270, 'action/1': 1211, 'action/2': 1218, 'action/3': 1305}
+[Training] Step 5100: policy_loss=-0.0172, grad_norm=0.5000, entropy=1.3851
+[Training] Step 5200: policy_loss=0.0524, grad_norm=0.5000, entropy=1.2360
+[Training] Step 5300: policy_loss=-0.5639, grad_norm=0.5000, entropy=0.3861
+[Training] Step 5400: policy_loss=-0.3713, grad_norm=0.5000, entropy=0.0000
+[Training] Step 5500: policy_loss=-1.2926, grad_norm=0.5000, entropy=0.0000
+[Training] Step 5600: policy_loss=-0.0353, grad_norm=0.5000, entropy=0.0000
+[Training] Step 5700: policy_loss=-3.0157, grad_norm=0.5000, entropy=0.0000
+[Training] Step 5800: policy_loss=1.1101, grad_norm=0.5000, entropy=0.0000
+[Training] Step 5900: policy_loss=-2.2736, grad_norm=0.5000, entropy=0.0000
+[Training] Step 6000: policy_loss=-1.2262, grad_norm=0.5000, entropy=0.0000
+Step:      6,000 | Episodes:    191 | Mean Reward (100):    0.14 | Best:    0.24
+[ActionDebug] Step 6000: {'action/0': 1325, 'action/1': 1261, 'action/2': 1298, 'action/3': 2120}
+[Training] Step 6100: policy_loss=-0.2275, grad_norm=0.5000, entropy=0.0000
+[Training] Step 6200: policy_loss=1.0270, grad_norm=0.5000, entropy=0.0000
+[Training] Step 6300: policy_loss=0.8201, grad_norm=0.5000, entropy=0.0000
+C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\gymnasium\wrappers\rendering.py:283: UserWarning: [33mWARN: Overwriting existing videos at D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\videos\eval-000200 folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)[0m
+  logger.warn(
+[Video] Saved episode video: videos\eval-episode-000200.mp4 (reward: 0.0)
+[Training] Step 6400: policy_loss=1.0665, grad_norm=0.5000, entropy=0.0000
+[Training] Step 6500: policy_loss=1.3091, grad_norm=0.5000, entropy=0.0000
+[Training] Step 6600: policy_loss=0.7926, grad_norm=0.5000, entropy=0.0000
+[Training] Step 6700: policy_loss=-1.7617, grad_norm=0.5000, entropy=0.0000
+[Training] Step 6800: policy_loss=-2.6327, grad_norm=0.5000, entropy=0.0000
+[Training] Step 6900: policy_loss=-2.5128, grad_norm=0.5000, entropy=0.0000
+[Training] Step 7000: policy_loss=-1.7655, grad_norm=0.3587, entropy=0.0000
+Step:      7,000 | Episodes:    220 | Mean Reward (100):    0.39 | Best:    0.39
+[ActionDebug] Step 7000: {'action/0': 1325, 'action/1': 1261, 'action/2': 1298, 'action/3': 3120}
+[Training] Step 7100: policy_loss=0.1821, grad_norm=0.5000, entropy=0.0000
+[Training] Step 7200: policy_loss=-1.3662, grad_norm=0.2091, entropy=0.0000
+[Training] Step 7300: policy_loss=-1.3969, grad_norm=0.5000, entropy=0.0000
+[Training] Step 7400: policy_loss=0.5616, grad_norm=0.5000, entropy=0.0000
+[Training] Step 7500: policy_loss=0.4341, grad_norm=0.5000, entropy=0.0000
+[Training] Step 7600: policy_loss=-1.0547, grad_norm=0.5000, entropy=0.0000
+[Training] Step 7700: policy_loss=0.6903, grad_norm=0.5000, entropy=0.0000
+[Training] Step 7800: policy_loss=-3.1075, grad_norm=0.2494, entropy=0.0000
+[Training] Step 7900: policy_loss=-1.5215, grad_norm=0.3726, entropy=0.0000
+[Training] Step 8000: policy_loss=-0.8829, grad_norm=0.5000, entropy=0.0000
+Step:      8,000 | Episodes:    252 | Mean Reward (100):    0.44 | Best:    0.44
+[ActionDebug] Step 8000: {'action/0': 1325, 'action/1': 1261, 'action/2': 1298, 'action/3': 4120}
+[Training] Step 8100: policy_loss=-2.3005, grad_norm=0.2178, entropy=0.0000
+[Training] Step 8200: policy_loss=-1.3233, grad_norm=0.3225, entropy=0.0000
+[Training] Step 8300: policy_loss=-1.1672, grad_norm=0.5000, entropy=0.0000
+[Training] Step 8400: policy_loss=-0.3105, grad_norm=0.5000, entropy=0.0012
+Traceback (most recent call last):
+  File ".\src\main.py", line 511, in <module>
+    main()
+  File ".\src\main.py", line 507, in main
+    train(config, args)
+  File ".\src\main.py", line 359, in train
+    update_metrics = agent.update()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 368, in update
+    dynamics_metrics = self.train_dynamics(n_updates=1)
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 223, in train_dynamics
+    del batch, loss
+KeyboardInterrupt
+Traceback (most recent call last):
+  File ".\src\main.py", line 511, in <module>
+    main()
+  File ".\src\main.py", line 507, in main
+    train(config, args)
+  File ".\src\main.py", line 359, in train
+    update_metrics = agent.update()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 368, in update
+    dynamics_metrics = self.train_dynamics(n_updates=1)
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 223, in train_dynamics
+    del batch, loss
+KeyboardInterrupt

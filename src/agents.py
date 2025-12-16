@@ -131,31 +131,48 @@ class MBPOAgent:
         self,
         state: np.ndarray,
         deterministic: bool = False,
-    ) -> Tuple[int, Dict]:
+    ) -> Tuple[np.ndarray, Dict]:
         """
-        Select action given state.
+        Select actions for a batch of states.
         
         Args:
-            state: Observation array
-            deterministic: Whether to use deterministic action
+            state: Observation array (batch_size, C, H, W) or single (C, H, W)
+            deterministic: Whether to use deterministic actions
         
         Returns:
-            action: Selected action
-            info: Dictionary with log_prob and value
+            actions: Selected actions array (batch_size,) or single int
+            info: Dictionary with batched log_probs and values
         """
         with torch.no_grad():
-            state_tensor = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
-            # Get raw logits for debugging
+            # Handle single state case for compatibility
+            is_single = len(state.shape) == 3
+            if is_single:
+                state = np.expand_dims(state, 0)
+
+            state_tensor = torch.from_numpy(state).float().to(self.device)
+            
             logits, _ = self.actor_critic.forward(state_tensor)
-            action, log_prob, entropy, value = self.actor_critic.get_action_and_value(
+            actions, log_probs, entropies, values = self.actor_critic.get_action_and_value(
                 state_tensor, deterministic=deterministic
             )
         
-        return action.cpu().item(), {
-            "log_prob": log_prob.cpu().item(),
-            "value": value.cpu().item(),
-            "entropy": entropy.cpu().item(),
-            "logits_std": logits.std().cpu().item(),  # Detect flat logits
+        actions_np = actions.cpu().numpy()
+        
+        # If input was single, return single action and scalar info
+        if is_single:
+            return actions_np[0], {
+                "log_prob": log_probs[0].cpu().item(),
+                "value": values[0].cpu().item(),
+                "entropy": entropies[0].cpu().item(),
+                "logits_std": logits[0].std().cpu().item(),
+            }
+
+        # Otherwise, return batch
+        return actions_np, {
+            "log_prob": log_probs.cpu().numpy(),
+            "value": values.cpu().numpy(),
+            "entropy": entropies.cpu().numpy(),
+            "logits_std": logits.std(dim=-1).mean().cpu().item(),
         }
     
     def store_transition(
@@ -194,13 +211,16 @@ class MBPOAgent:
                 batch.rewards,
             )
             
-            self.dynamics_optimizer.zero_grad()
+            self.dynamics_optimizer.zero_grad(set_to_none=True)  # More memory efficient
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.dynamics.parameters(), self.max_grad_norm)
             self.dynamics_optimizer.step()
             
             for k, v in metrics.items():
                 total_metrics[k] = total_metrics.get(k, 0) + v / n_updates
+            
+            # Explicit cleanup
+            del batch, loss
         
         self.dynamics_trained = True
         return total_metrics
@@ -209,46 +229,56 @@ class MBPOAgent:
         """
         Generate synthetic rollouts using dynamics ensemble.
         
-        Samples initial states from real buffer, then uses dynamics
-        models to generate trajectories. This is the core of MBPO's
-        data augmentation strategy.
+        Memory-optimized for 4GB GPUs.
         
         Returns:
             Number of transitions generated
         """
-        # Don't generate rollouts until we have enough real data AND dynamics is trained
-        if not self.dynamics_trained or not self.real_buffer.is_ready(self.batch_size * 10):
+        if not self.dynamics_trained or not self.real_buffer.is_ready(self.batch_size * 5):
             return 0
         
-        # Sample initial states from real buffer
-        batch_size = min(self.model_rollout_batch_size, len(self.real_buffer))
-        batch = self.real_buffer.sample(batch_size)
-        
-        states = batch.states
         total_transitions = 0
+        model_idx = 0  # Always use first model for consistency
         
-        with torch.no_grad():
-            for _ in range(self.model_rollout_length):
-                # Get actions from policy
-                actions, _, _, _ = self.actor_critic.get_action_and_value(states)
-                
-                # Predict next states using dynamics ensemble
-                # Randomly select model for each prediction (exploration)
-                next_states, rewards, uncertainty = self.dynamics.predict_next_state(
-                    states, actions, use_mean=False
-                )
-                
-                # Simple termination prediction (use real data statistics)
-                # For Breakout, episodes rarely terminate mid-rollout
-                dones = torch.zeros(batch_size, device=self.device)
-                
-                # Store in model buffer
-                self.model_buffer.add_rollouts(
-                    states, actions, rewards.squeeze(-1), next_states, dones
-                )
-                
-                total_transitions += batch_size
-                states = next_states
+        # Process in small chunks
+        chunk_size = 32  # Very small to minimize memory
+        num_chunks = max(1, self.model_rollout_batch_size // chunk_size)
+        
+        for _ in range(num_chunks):
+            batch = self.real_buffer.sample(chunk_size)
+            states = batch.states.clone()  # Clone to avoid reference issues
+            del batch  # Free the batch immediately
+            
+            with torch.no_grad():
+                for _ in range(self.model_rollout_length):
+                    actions, _, _, _ = self.actor_critic.get_action_and_value(states)
+                    
+                    next_states, rewards, _ = self.dynamics.predict_next_state(
+                        states, actions, model_idx=model_idx, use_mean=True
+                    )
+                    
+                    dones = torch.zeros(chunk_size, device=self.device)
+                    
+                    # Convert to numpy and add to buffer
+                    s_np = states.cpu().numpy()
+                    a_np = actions.cpu().numpy()
+                    r_np = rewards.squeeze(-1).cpu().numpy()
+                    ns_np = next_states.cpu().numpy()
+                    d_np = dones.cpu().numpy()
+                    
+                    self.model_buffer.buffer.add_batch(s_np, a_np, r_np, ns_np, d_np)
+                    
+                    total_transitions += chunk_size
+                    
+                    # Update states for next rollout step
+                    states = next_states.detach()
+                    
+                    # Clean up numpy arrays
+                    del s_np, a_np, r_np, ns_np, d_np
+            
+            # Clean up tensors after each chunk
+            del states, actions, next_states, rewards, dones
+            torch.cuda.empty_cache()
         
         return total_transitions
     
@@ -286,42 +316,46 @@ class MBPOAgent:
             advantages = targets - values
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
             
-            # Policy loss (simple policy gradient, not full PPO for efficiency)
+            # Policy loss (simple policy gradient)
             policy_loss = -(log_probs * advantages.detach()).mean()
             
             # Value loss
             value_loss = F.mse_loss(values, targets)
             
-            # Entropy bonus
-            entropy_loss = -entropy.mean()
+            # Entropy bonus - use NEGATIVE entropy loss to MAXIMIZE entropy
+            # Higher entropy = more exploration
+            mean_entropy = entropy.mean()
+            entropy_loss = -mean_entropy  # Negative because we want to maximize entropy
             
-            # Total loss
+            # Total loss: minimize policy_loss + value_loss, maximize entropy
+            # So we ADD ent_coef * entropy_loss (which is negative of entropy)
+            # Actually we want: loss = policy_loss + vf*value_loss - ent_coef*entropy
+            # Which is: loss = policy_loss + vf*value_loss + ent_coef*(-entropy)
             loss = policy_loss + self.vf_coef * value_loss + self.ent_coef * entropy_loss
             
-            self.policy_optimizer.zero_grad()
+            self.policy_optimizer.zero_grad(set_to_none=True)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
+            # Clip gradients and capture gradient norm for logging/diagnostics
+            grad_norm = torch.nn.utils.clip_grad_norm_(
+                self.actor_critic.parameters(), self.max_grad_norm
+            )
             self.policy_optimizer.step()
-            
-            # Collect metrics including gradient norms for debugging
-            total_grad_norm = 0.0
-            for p in self.actor_critic.parameters():
-                if p.grad is not None:
-                    total_grad_norm += p.grad.data.norm(2).item() ** 2
-            total_grad_norm = total_grad_norm ** 0.5
             
             metrics = {
                 "policy/loss": policy_loss.item(),
                 "policy/value_loss": value_loss.item(),
-                "policy/entropy": -entropy_loss.item(),
+                "policy/entropy": mean_entropy.item(),
                 "policy/total_loss": loss.item(),
-                "policy/grad_norm": total_grad_norm,
+                "policy/grad_norm": float(grad_norm) if isinstance(grad_norm, (float, int)) else grad_norm,
                 "policy/mean_advantage": advantages.mean().item(),
                 "policy/mean_value": values.mean().item(),
             }
             
             for k, v in metrics.items():
                 total_metrics[k] = total_metrics.get(k, 0) + v / n_updates
+            
+            # Cleanup
+            del batch, loss
         
         return total_metrics
     

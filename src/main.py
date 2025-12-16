@@ -269,13 +269,9 @@ def train(config: Dict, args: argparse.Namespace) -> float:
     action_debug_steps = config.get("debug", {}).get("action_debug_steps", 10_000)
     action_log_freq = config.get("debug", {}).get("action_log_freq", 1_000)
     while global_step < total_timesteps:
-        # Get actions for all environments
-        actions = []
-        for i in range(num_envs):
-            action, action_info = agent.get_action(obs[i], deterministic=False)
-            actions.append(action)
-        actions = np.array(actions)
-
+        # Get actions for all environments in a single batch
+        actions, _ = agent.get_action(obs, deterministic=False)
+        
         # Update action distribution counters (for debugging early bias)
         if global_step < action_debug_steps:
             # bincount over current parallel actions
@@ -377,6 +373,12 @@ def train(config: Dict, args: argparse.Namespace) -> float:
             if hasattr(agent, 'generate_model_rollouts'):
                 n_generated = agent.generate_model_rollouts()
                 metrics_logger.update({"model/rollouts_generated": n_generated})
+        
+        # Commit staged rollouts to buffer
+        if (algorithm == "mbpo" and 
+            global_step >= learning_starts and 
+            hasattr(agent.model_buffer, 'commit_to_buffer')):
+            agent.model_buffer.commit_to_buffer(num_commits=2)
         
         # Logging
         if global_step % log_freq == 0:

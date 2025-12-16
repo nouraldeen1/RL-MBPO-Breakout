@@ -23,23 +23,23 @@ debug:
   action_log_freq: 1000
 
 training:
-  total_timesteps: 1_000_000 # Total environment steps
-  buffer_size: 500_000 # Replay buffer capacity
-  batch_size: 256 # Batch size for updates
-  learning_starts: 50_000 # Steps before training starts (was 50k - too high!)
+  total_timesteps: 100_000 # Total environment steps
+  buffer_size: 100_000 # Replay buffer capacity
+  batch_size: 64 # Batch size for updates (small for memory)
+  learning_starts: 5_000 # Steps before training starts
   # Steps before training starts
-  gamma: 0.99 # Discount factor
+  gamma: 0.999 # Discount factor
   tau: 0.005 # Soft update coefficient
 
   # Learning rates
-  policy_lr: 3e-4 # Policy network learning rate
+  policy_lr: 1e-3 # Policy network learning rate (reduced to prevent collapse)
   dynamics_lr: 1e-4 # Dynamics model learning rate
 
   # MBPO specific
   model_rollout_freq: 1000 # Steps between model rollouts
-  model_rollout_length: 1 # Horizon for model rollouts
-  model_rollout_batch_size: 20_000 # Batch size for model rollouts
-  real_ratio: 0.05 # Ratio of real vs model data
+  model_rollout_length: 1 # Horizon for model rollouts (keep short)
+  model_rollout_batch_size: 256 # Batch size for model rollouts (small)
+  real_ratio: 0.5 # Ratio of real vs model data
 
   # Update frequencies
   train_freq: 4 # Environment steps between updates
@@ -52,11 +52,11 @@ model:
   cnn_channels: [ 32, 64, 64 ] # Conv layer output channels
   cnn_kernels: [ 8, 4, 3 ] # Conv layer kernel sizes
   cnn_strides: [ 4, 2, 1 ] # Conv layer strides
-  fc_dim: 512 # Fully connected layer dimension
+  fc_dim: 256 # Fully connected layer dimension
 
   # Dynamics Ensemble (MBPO Core)
-  ensemble_size: 5 # Number of dynamics models
-  dynamics_hidden_dim: 256 # Hidden dimension for dynamics
+  ensemble_size: 3 # Number of dynamics models (reduced for memory)
+  dynamics_hidden_dim: 128 # Hidden dimension for dynamics
   predict_reward: true # Whether to predict rewards
 
 # Early Stopping
@@ -85,7 +85,7 @@ algorithm: "mbpo" # Options: "mbpo", "ppo", "sac", "ddqn"
 # Algorithm-specific configs
 ppo:
   clip_range: 0.2
-  ent_coef: 0.02
+  ent_coef: 0.05 # Increased from 0.02 to prevent entropy collapse
   vf_coef: 0.5
   max_grad_norm: 0.5
   n_epochs: 10

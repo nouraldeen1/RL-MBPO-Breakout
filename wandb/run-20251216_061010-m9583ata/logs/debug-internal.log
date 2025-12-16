@@ -4,3 +4,4 @@
 {"time":"2025-12-16T06:10:13.702814+02:00","level":"INFO","msg":"stream: started","id":"m9583ata"}
 {"time":"2025-12-16T06:10:13.7035907+02:00","level":"INFO","msg":"sender: started","stream_id":"m9583ata"}
 {"time":"2025-12-16T06:10:13.7035907+02:00","level":"INFO","msg":"writer: started","stream_id":"m9583ata"}
+{"time":"2025-12-16T06:27:02.3778569+02:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/files/nour-khalaf031-cairo-university/MBPO-Breakout/m9583ata/file_stream\": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"}

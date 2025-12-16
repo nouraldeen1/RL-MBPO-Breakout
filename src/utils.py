@@ -145,15 +145,70 @@ class ReplayBuffer:
     ) -> None:
         """Add a batch of transitions to the buffer."""
         batch_size = states.shape[0]
-        # Vectorized add for efficiency
-        for i in range(batch_size):
-            self.add(
-                states[i],
-                int(actions[i]),
-                float(rewards[i]),
-                next_states[i],
-                bool(dones[i]),
+        if batch_size == 0:
+            return
+
+        # Handle wrap-around without recursion
+        end_ptr = self.ptr + batch_size
+        
+        if end_ptr <= self.capacity:
+            # No wrap-around needed
+            indices = slice(self.ptr, end_ptr)
+            self._store_at_indices(indices, states, actions, rewards, next_states, dones)
+            self.ptr = end_ptr % self.capacity
+        else:
+            # Wrap-around: split into two parts
+            part1_size = self.capacity - self.ptr
+            part2_size = batch_size - part1_size
+            
+            # Part 1: fill to end
+            self._store_at_indices(
+                slice(self.ptr, self.capacity),
+                states[:part1_size], actions[:part1_size], rewards[:part1_size],
+                next_states[:part1_size], dones[:part1_size]
             )
+            # Part 2: fill from beginning
+            self._store_at_indices(
+                slice(0, part2_size),
+                states[part1_size:], actions[part1_size:], rewards[part1_size:],
+                next_states[part1_size:], dones[part1_size:]
+            )
+            self.ptr = part2_size
+        
+        self.size = min(self.size + batch_size, self.capacity)
+
+    def _store_at_indices(
+        self,
+        indices: slice,
+        states: np.ndarray,
+        actions: np.ndarray,
+        rewards: np.ndarray,
+        next_states: np.ndarray,
+        dones: np.ndarray,
+    ) -> None:
+        """Store data at specified indices. Avoids creating unnecessary copies."""
+        if self.store_uint8:
+            # Convert in-place where possible
+            if states.dtype in (np.float32, np.float64):
+                np.multiply(states, 255.0, out=states if states.flags.writeable else None)
+                np.clip(states, 0, 255, out=states if states.flags.writeable else None)
+                self.states[indices] = states.astype(np.uint8, copy=False)
+            else:
+                self.states[indices] = states
+            
+            if next_states.dtype in (np.float32, np.float64):
+                np.multiply(next_states, 255.0, out=next_states if next_states.flags.writeable else None)
+                np.clip(next_states, 0, 255, out=next_states if next_states.flags.writeable else None)
+                self.next_states[indices] = next_states.astype(np.uint8, copy=False)
+            else:
+                self.next_states[indices] = next_states
+        else:
+            self.states[indices] = states
+            self.next_states[indices] = next_states
+        
+        self.actions[indices] = actions
+        self.rewards[indices] = rewards
+        self.dones[indices] = dones
     
     def sample(self, batch_size: int) -> Batch:
         """Sample a random batch of transitions."""
@@ -211,14 +266,20 @@ class ModelReplayBuffer:
         next_states: torch.Tensor,
         dones: torch.Tensor,
     ) -> None:
-        """Add model rollouts to the buffer."""
+        """Add model rollouts directly to the CPU buffer."""
+        # Use non_blocking=False to ensure data is fully transferred
+        # before the tensors go out of scope
         self.buffer.add_batch(
-            states.cpu().numpy(),
-            actions.cpu().numpy(),
-            rewards.cpu().numpy(),
-            next_states.cpu().numpy(),
-            dones.cpu().numpy(),
+            states.detach().cpu().numpy(),
+            actions.detach().cpu().numpy(),
+            rewards.detach().cpu().numpy(),
+            next_states.detach().cpu().numpy(),
+            dones.detach().cpu().numpy(),
         )
+    
+    def commit_to_buffer(self, num_commits: int = 1) -> int:
+        """No-op for compatibility. Data is committed immediately now."""
+        return 0
     
     def sample(self, batch_size: int) -> Batch:
         """Sample from model buffer."""

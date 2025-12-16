@@ -1,0 +1,11 @@
+{"time":"2025-12-16T07:17:32.506526+02:00","level":"INFO","msg":"stream: starting","core version":"0.23.0"}
+{"time":"2025-12-16T07:17:33.0751229+02:00","level":"INFO","msg":"stream: created new stream","id":"etdlhmxr"}
+{"time":"2025-12-16T07:17:33.0756426+02:00","level":"INFO","msg":"handler: started","stream_id":"etdlhmxr"}
+{"time":"2025-12-16T07:17:33.0762424+02:00","level":"INFO","msg":"stream: started","id":"etdlhmxr"}
+{"time":"2025-12-16T07:17:33.0762424+02:00","level":"INFO","msg":"sender: started","stream_id":"etdlhmxr"}
+{"time":"2025-12-16T07:17:33.0762424+02:00","level":"INFO","msg":"writer: started","stream_id":"etdlhmxr"}
+{"time":"2025-12-16T07:18:18.9937266+02:00","level":"INFO","msg":"stream: closing","id":"etdlhmxr"}
+{"time":"2025-12-16T07:18:20.0073505+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-12-16T07:18:20.3814483+02:00","level":"INFO","msg":"handler: closed","stream_id":"etdlhmxr"}
+{"time":"2025-12-16T07:18:20.3821225+02:00","level":"INFO","msg":"sender: closed","stream_id":"etdlhmxr"}
+{"time":"2025-12-16T07:18:20.3821965+02:00","level":"INFO","msg":"stream: closed","id":"etdlhmxr"}

@@ -1,0 +1,11 @@
+{"time":"2025-12-16T07:45:09.5100938+02:00","level":"INFO","msg":"stream: starting","core version":"0.23.0"}
+{"time":"2025-12-16T07:45:10.0724089+02:00","level":"INFO","msg":"stream: created new stream","id":"spybjc3d"}
+{"time":"2025-12-16T07:45:10.0724089+02:00","level":"INFO","msg":"handler: started","stream_id":"spybjc3d"}
+{"time":"2025-12-16T07:45:10.0730613+02:00","level":"INFO","msg":"stream: started","id":"spybjc3d"}
+{"time":"2025-12-16T07:45:10.0735715+02:00","level":"INFO","msg":"sender: started","stream_id":"spybjc3d"}
+{"time":"2025-12-16T07:45:10.0730613+02:00","level":"INFO","msg":"writer: started","stream_id":"spybjc3d"}
+{"time":"2025-12-16T07:45:24.7153895+02:00","level":"INFO","msg":"stream: closing","id":"spybjc3d"}
+{"time":"2025-12-16T07:45:25.678749+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-12-16T07:45:26.1499896+02:00","level":"INFO","msg":"handler: closed","stream_id":"spybjc3d"}
+{"time":"2025-12-16T07:45:26.1505319+02:00","level":"INFO","msg":"sender: closed","stream_id":"spybjc3d"}
+{"time":"2025-12-16T07:45:26.1505319+02:00","level":"INFO","msg":"stream: closed","id":"spybjc3d"}
