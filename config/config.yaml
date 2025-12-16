@@ -26,13 +26,13 @@ training:
   total_timesteps: 100_000 # Total environment steps
   buffer_size: 100_000 # Replay buffer capacity
   batch_size: 64 # Batch size for updates (small for memory)
-  learning_starts: 5_000 # Steps before training starts
+  learning_starts: 20_000 # Steps before training starts
   # Steps before training starts
-  gamma: 0.999 # Discount factor
+  gamma: 0.99 # Discount factor
   tau: 0.005 # Soft update coefficient
 
   # Learning rates
-  policy_lr: 1e-3 # Policy network learning rate (reduced to prevent collapse)
+  policy_lr: 1e-4 # Policy network learning rate (reduced to prevent collapse)
   dynamics_lr: 1e-4 # Dynamics model learning rate
 
   # MBPO specific
@@ -85,7 +85,7 @@ algorithm: "mbpo" # Options: "mbpo", "ppo", "sac", "ddqn"
 # Algorithm-specific configs
 ppo:
   clip_range: 0.2
-  ent_coef: 0.05 # Increased from 0.02 to prevent entropy collapse
+  ent_coef: 0.1 # Increased from 0.02 to prevent entropy collapse
   vf_coef: 0.5
   max_grad_norm: 0.5
   n_epochs: 10
