@@ -14,15 +14,15 @@ env:
   noop_max: 30 # Max no-op actions at reset
   frame_skip: 4 # Frames to skip with max pooling
   record_video: true # Enable video recording
-  video_trigger_freq: 50 # Record every N episodes
+  video_trigger_freq: 100 # Record every N episodes
   video_dir: "videos" # Video output directory
 
 # Training Configuration
 training:
-  total_timesteps: 10_000_000 # Total environment steps
-  buffer_size: 1_000_000 # Replay buffer capacity
+  total_timesteps: 1_000_000 # Total environment steps
+  buffer_size: 500_000 # Replay buffer capacity
   batch_size: 256 # Batch size for updates
-  learning_starts: 0.0005
+  learning_starts: 50_000
  # Steps before training starts
   gamma: 0.99 # Discount factor
   tau: 0.005 # Soft update coefficient
@@ -32,9 +32,9 @@ training:
   dynamics_lr: 1e-4 # Dynamics model learning rate
 
   # MBPO specific
-  model_rollout_freq: 250 # Steps between model rollouts
+  model_rollout_freq: 1000 # Steps between model rollouts
   model_rollout_length: 1 # Horizon for model rollouts
-  model_rollout_batch_size: 100_000 # Batch size for model rollouts
+  model_rollout_batch_size: 20_000 # Batch size for model rollouts
   real_ratio: 0.05 # Ratio of real vs model data
 
   # Update frequencies
@@ -57,10 +57,10 @@ model:
 
 # Early Stopping
 early_stopping:
-  enabled: true
+  enabled: false
   target_reward: 400.0 # Stop when mean reward reaches this
   window_size: 100 # Window for computing mean reward
-  patience: 50 # Episodes without improvement before stop
+  patience: 4000 # Episodes without improvement before stop
 
 # Logging & Checkpoints
 logging:

@@ -1,0 +1,12 @@
+{"time":"2025-12-16T05:36:33.8015707+02:00","level":"INFO","msg":"stream: starting","core version":"0.23.0"}
+{"time":"2025-12-16T05:36:34.3785241+02:00","level":"INFO","msg":"stream: created new stream","id":"ndo4vid8"}
+{"time":"2025-12-16T05:36:34.3785241+02:00","level":"INFO","msg":"handler: started","stream_id":"ndo4vid8"}
+{"time":"2025-12-16T05:36:34.3795773+02:00","level":"INFO","msg":"stream: started","id":"ndo4vid8"}
+{"time":"2025-12-16T05:36:34.3801047+02:00","level":"INFO","msg":"writer: started","stream_id":"ndo4vid8"}
+{"time":"2025-12-16T05:36:34.3801047+02:00","level":"INFO","msg":"sender: started","stream_id":"ndo4vid8"}
+{"time":"2025-12-16T05:39:19.9047646+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-12-16T05:39:20.2986301+02:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2025-12-16T05:39:20.31948+02:00","level":"INFO","msg":"stream: closing","id":"ndo4vid8"}
+{"time":"2025-12-16T05:39:20.31948+02:00","level":"INFO","msg":"handler: closed","stream_id":"ndo4vid8"}
+{"time":"2025-12-16T05:39:20.3199889+02:00","level":"INFO","msg":"sender: closed","stream_id":"ndo4vid8"}
+{"time":"2025-12-16T05:39:20.3199889+02:00","level":"INFO","msg":"stream: closed","id":"ndo4vid8"}

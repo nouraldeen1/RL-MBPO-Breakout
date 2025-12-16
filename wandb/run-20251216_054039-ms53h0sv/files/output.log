@@ -1,0 +1,22 @@
+wandb: Detected [agents] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+
+Starting training for 1,000,000 timesteps...
+============================================================
+Step:      1,000 | Episodes:     21 | Mean Reward (100):    0.43 | Best:    -inf
+wandb: WARNING Tried to log to step 22 that is less than the current step 1000. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 23 that is less than the current step 1000. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 24 that is less than the current step 1000. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 25 that is less than the current step 1000. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 26 that is less than the current step 1000. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 27 that is less than the current step 1000. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 28 that is less than the current step 1000. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 29 that is less than the current step 1000. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 30 that is less than the current step 1000. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 31 that is less than the current step 1000. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 32 that is less than the current step 1000. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 33 that is less than the current step 1000. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 34 that is less than the current step 1000. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+wandb: WARNING Tried to log to step 35 that is less than the current step 1000. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+Step:      2,000 | Episodes:     43 | Mean Reward (100):    0.49 | Best:    -inf

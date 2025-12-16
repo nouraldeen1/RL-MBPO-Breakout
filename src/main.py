@@ -1,3 +1,5 @@
+
+
 """
 Main Training Script for MBPO-Breakout
 ======================================
@@ -48,7 +50,57 @@ from utils import (
     set_seed,
     find_latest_video,
 )
+def record_video_episode(config, agent, global_step, episode_idx: int, video_dir="videos"):
+    """Run a single deterministic episode in a dedicated video-recording env.
 
+    After the episode ends, find the most recent video produced and rename it
+    to include the global episode index to avoid overwriting previous videos.
+    """
+    from env_factory import make_env
+    from utils import find_latest_video
+    import shutil
+    import numpy as np
+
+    # Use a fresh local directory for this eval to avoid RecordVideo overwrite warnings
+    local_video_dir = os.path.join(video_dir, f"eval-{episode_idx:06d}")
+    env_fn = make_env(
+        env_id=config.get("env", {}).get("name", "BreakoutNoFrameskip-v4"),
+        seed=config.get("seed", 42),
+        idx=0,
+        capture_video=True,
+        video_dir=local_video_dir,
+        video_trigger_freq=1,
+    )
+
+    env = env_fn()
+    obs, info = env.reset()
+    done = False
+    total_reward = 0.0
+    while not done:
+        action, _ = agent.get_action(obs, deterministic=True)
+        obs, reward, terminated, truncated, info = env.step(action)
+        # reward can be scalar or array-like from wrappers — handle both
+        try:
+            total_reward += float(reward)
+        except Exception:
+            # If reward is an array, sum
+            total_reward += float(np.asarray(reward).sum())
+        done = bool(terminated or truncated)
+
+    env.close()
+
+    # Find the most recent video in the local folder and move it to the main video dir
+    latest = find_latest_video(local_video_dir)
+    if latest is not None:
+        os.makedirs(video_dir, exist_ok=True)
+        dst = os.path.join(video_dir, f"eval-episode-{episode_idx:06d}.mp4")
+        try:
+            shutil.move(str(latest), dst)
+            print(f"[Video] Saved episode video: {dst} (reward: {total_reward})")
+        except Exception:
+            print(f"[Video] Recording finished but failed to move video: {latest}")
+    else:
+        print(f"[Video] Episode finished but no video file found in {local_video_dir}")
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
@@ -203,6 +255,7 @@ def train(config: Dict, args: argparse.Namespace) -> float:
     episode_count = 0
     best_mean_reward = float("-inf")
     
+    last_video_episode = 0
     while global_step < total_timesteps:
         # Get actions for all environments
         actions = []
@@ -235,12 +288,13 @@ def train(config: Dict, args: argparse.Namespace) -> float:
                 should_stop = early_stopper.update(episode_rewards[i])
                 
                 if use_wandb:
+                    # Log per-episode metrics to Wandb using episode index as step
                     wandb.log({
-                        "episode/reward": episode_rewards[i],
-                        "episode/length": episode_lengths[i],
-                        "episode/count": episode_count,
+                        "episode/reward": float(episode_rewards[i]),
+                        "episode/length": int(episode_lengths[i]),
+                        "episode/count": int(episode_count),
                         "episode/mean_reward_100": early_stopper.get_mean_reward(),
-                    }, step=global_step)
+                    }, step=episode_count)
                 
                 if should_stop:
                     print(f"\n{'=' * 60}")
@@ -272,6 +326,11 @@ def train(config: Dict, args: argparse.Namespace) -> float:
         # Update observation
         obs = next_obs
         global_step += num_envs
+
+        # Record a video every 100 global episodes
+        if episode_count // 100 > last_video_episode // 100:
+            record_video_episode(config, agent, global_step, episode_count)
+            last_video_episode = episode_count
         
         # Training updates
         if global_step >= learning_starts and global_step % train_freq == 0:

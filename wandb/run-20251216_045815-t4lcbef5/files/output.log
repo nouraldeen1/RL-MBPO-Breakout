@@ -1,0 +1,35 @@
+wandb: Detected [agents] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+
+Starting training for 10,000,000 timesteps...
+============================================================
+Step:      1,000 | Episodes:     25 | Mean Reward (100):    0.40 | Best:    -inf
+Step:      2,000 | Episodes:     51 | Mean Reward (100):    0.37 | Best:    -inf
+Step:      3,000 | Episodes:     83 | Mean Reward (100):    0.27 | Best:    -inf
+Step:      4,000 | Episodes:    107 | Mean Reward (100):    0.36 | Best:    0.36
+Step:      5,000 | Episodes:    132 | Mean Reward (100):    0.33 | Best:    0.36
+Step:      6,000 | Episodes:    164 | Mean Reward (100):    0.30 | Best:    0.36
+Step:      7,000 | Episodes:    186 | Mean Reward (100):    0.41 | Best:    0.41
+Step:      8,000 | Episodes:    212 | Mean Reward (100):    0.34 | Best:    0.41
+Step:      9,000 | Episodes:    241 | Mean Reward (100):    0.32 | Best:    0.41
+Step:     10,000 | Episodes:    269 | Mean Reward (100):    0.34 | Best:    0.41
+Step:     11,000 | Episodes:    294 | Mean Reward (100):    0.29 | Best:    0.41
+Step:     12,000 | Episodes:    317 | Mean Reward (100):    0.41 | Best:    0.41
+Step:     13,000 | Episodes:    346 | Mean Reward (100):    0.37 | Best:    0.41
+Step:     14,000 | Episodes:    377 | Mean Reward (100):    0.36 | Best:    0.41
+Step:     15,000 | Episodes:    408 | Mean Reward (100):    0.27 | Best:    0.41
+Step:     16,000 | Episodes:    435 | Mean Reward (100):    0.28 | Best:    0.41
+Step:     17,000 | Episodes:    463 | Mean Reward (100):    0.28 | Best:    0.41
+Step:     18,000 | Episodes:    488 | Mean Reward (100):    0.29 | Best:    0.41
+Step:     19,000 | Episodes:    517 | Mean Reward (100):    0.31 | Best:    0.41
+Step:     20,000 | Episodes:    540 | Mean Reward (100):    0.36 | Best:    0.41
+Step:     21,000 | Episodes:    578 | Mean Reward (100):    0.32 | Best:    0.41
+
+============================================================
+Early stopping triggered: No improvement for 400 episodes
+Final mean reward: 0.26
+Total episodes: 586
+Total timesteps: 21,264
+Final model saved to checkpoints/final_mbpo.pt
+wandb: WARNING `format` argument was not provided, defaulting to `gif`. This parameter will be required in v0.20.0, please specify the format explicitly.

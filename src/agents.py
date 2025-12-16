@@ -116,7 +116,7 @@ class MBPOAgent:
         )
         
         # Replay buffers
-        buffer_size = training_cfg.get("buffer_size", 1000000)
+        buffer_size = training_cfg.get("buffer_size", 10000)
         self.real_buffer = ReplayBuffer(buffer_size, obs_shape, device)
         self.model_buffer = ModelReplayBuffer(buffer_size, obs_shape, device)
         self.mixed_buffer = MixedReplayBuffer(
