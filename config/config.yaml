@@ -23,7 +23,7 @@ debug:
   action_log_freq: 1000
 
 training:
-  total_timesteps: 100_000 # Total environment steps
+  total_timesteps: 1_000_000 # Total environment steps
   buffer_size: 100_000 # Replay buffer capacity
   batch_size: 64 # Batch size for updates (small for memory)
   learning_starts: 20_000 # Steps before training starts
@@ -32,14 +32,14 @@ training:
   tau: 0.005 # Soft update coefficient
 
   # Learning rates
-  policy_lr: 1e-4 # Policy network learning rate (reduced to prevent collapse)
+  policy_lr: 3e-5 # Policy network learning rate (reduced to stabilize updates)
   dynamics_lr: 1e-4 # Dynamics model learning rate
 
   # MBPO specific
   model_rollout_freq: 1000 # Steps between model rollouts
   model_rollout_length: 1 # Horizon for model rollouts (keep short)
   model_rollout_batch_size: 256 # Batch size for model rollouts (small)
-  real_ratio: 0.5 # Ratio of real vs model data
+  real_ratio: 0.8 # Ratio of real vs model data (favor real data to reduce model bias)
 
   # Update frequencies
   train_freq: 4 # Environment steps between updates
@@ -85,7 +85,7 @@ algorithm: "mbpo" # Options: "mbpo", "ppo", "sac", "ddqn"
 # Algorithm-specific configs
 ppo:
   clip_range: 0.2
-  ent_coef: 0.1 # Increased from 0.02 to prevent entropy collapse
+  ent_coef: 0.1 # Increase entropy bonus to encourage exploration
   vf_coef: 0.5
   max_grad_norm: 0.5
   n_epochs: 10

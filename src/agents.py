@@ -89,6 +89,10 @@ class MBPOAgent:
         self.ent_coef = config.get("ppo", {}).get("ent_coef", 0.01)
         self.vf_coef = config.get("ppo", {}).get("vf_coef", 0.5)
         self.max_grad_norm = config.get("ppo", {}).get("max_grad_norm", 0.5)
+        # Safety threshold: skip applying extremely large updates
+        self.grad_norm_skip_threshold = (
+            training_cfg.get("grad_norm_skip_threshold", 10.0)
+        )
         
         # Create models
         self.actor_critic = ActorCritic(
@@ -302,6 +306,8 @@ class MBPOAgent:
             batch = self.mixed_buffer.sample(self.batch_size)
             
             # Get current policy outputs
+            # Also compute logits diagnostics to detect blowups that zero entropy
+            logits, _ = self.actor_critic.forward(batch.states)
             _, log_probs, entropy, values = self.actor_critic.get_action_and_value(
                 batch.states, action=batch.actions
             )
@@ -339,7 +345,17 @@ class MBPOAgent:
             grad_norm = torch.nn.utils.clip_grad_norm_(
                 self.actor_critic.parameters(), self.max_grad_norm
             )
-            self.policy_optimizer.step()
+
+            # Safety: if the pre-clip grad norm is extremely large, skip the update
+            # to avoid catastrophic parameter changes that blow up logits/entropy.
+            updates_skipped = 0
+            if grad_norm > self.grad_norm_skip_threshold:
+                # Skip stepping this update
+                updates_skipped = 1
+                # Zero grads to avoid accidental application
+                self.policy_optimizer.zero_grad(set_to_none=True)
+            else:
+                self.policy_optimizer.step()
             
             metrics = {
                 "policy/loss": policy_loss.item(),
@@ -349,6 +365,10 @@ class MBPOAgent:
                 "policy/grad_norm": float(grad_norm) if isinstance(grad_norm, (float, int)) else grad_norm,
                 "policy/mean_advantage": advantages.mean().item(),
                 "policy/mean_value": values.mean().item(),
+                # Log logits statistics for diagnostics (detect numerical blowup)
+                "policy/logits_max_abs": float(logits.abs().max().detach().cpu().item()),
+                "policy/logits_std": float(logits.detach().cpu().std().item()),
+                "policy/updates_skipped": updates_skipped,
             }
             
             for k, v in metrics.items():
