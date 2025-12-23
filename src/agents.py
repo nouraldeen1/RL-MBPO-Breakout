@@ -1,584 +1,438 @@
 """
-MBPO Agent Implementation
-=========================
-
-Model-Based Policy Optimization agent for Breakout.
-
-MBPO Algorithm Overview:
-1. Collect real data from environment
-2. Train dynamics ensemble on real data
-3. Generate synthetic rollouts using learned models
-4. Train policy on mixture of real and synthetic data
-
-Key Benefits:
-- Sample efficient (fewer real environment interactions)
-- Uncertainty-aware (ensemble provides epistemic uncertainty)
-- Works with existing model-free algorithms as subroutine
-
-Author: CMPS458 RL Project
+Agent Implementations: MBPO, DDQN, and World Models
+===================================================
 """
+from __future__ import annotations  # MUST BE FIRST LINE
 
-from __future__ import annotations
-
-from typing import Dict, Optional, Tuple
-
+from typing import Dict, Optional, Tuple, Union
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical
 
-from models import ActorCritic, DynamicsEnsemble, create_models
-from utils import Batch, MixedReplayBuffer, ModelReplayBuffer, ReplayBuffer
+# Import all models. Ensure models.py has these classes.
+from models import (
+    ActorCritic, 
+    DynamicsEnsemble, 
+    QNetwork, 
+    VAE, 
+    MDNRNN, 
+    WorldModelsController
+)
+from utils import (
+    Batch, 
+    MixedReplayBuffer, 
+    ModelReplayBuffer, 
+    ReplayBuffer
+)
 
+# =============================================================================
+# World Models Agent (The one you are currently using)
+# =============================================================================
 
-class MBPOAgent:
+class WorldModelsAgent:
     """
-    MBPO Agent with dynamics ensemble and actor-critic policy.
-    
-    Implements the Model-Based Policy Optimization algorithm which:
-    1. Learns an ensemble of dynamics models
-    2. Generates synthetic trajectories for data augmentation
-    3. Trains a policy using PPO-style updates on mixed data
-    
-    Args:
-        obs_shape: Observation shape (4, 84, 84)
-        num_actions: Number of discrete actions
-        config: Configuration dictionary
-        device: Device for computation
+    World Models Agent: V (VAE) + M (MDN-RNN) + C (Controller).
+    Trains dynamics in latent space and a linear controller using policy gradients.
     """
-    
-    def __init__(
-        self,
-        obs_shape: Tuple[int, ...] = (4, 84, 84),
-        num_actions: int = 4,
-        config: Dict = None,
-        device: str = "cuda",
-    ) -> None:
+    def __init__(self, obs_shape, num_actions, config, device):
         self.obs_shape = obs_shape
         self.num_actions = num_actions
         self.device = device
         
-        # Load config
-        config = config or {}
-        training_cfg = config.get("training", {})
+        # Config
+        train_cfg = config.get("training", {})
         model_cfg = config.get("model", {})
         
-        # Training parameters
-        self.gamma = training_cfg.get("gamma", 0.99)
-        self.tau = training_cfg.get("tau", 0.005)
-        def _parse_float(value, default: float):
-            if value is None:
-                return default
-            if isinstance(value, float) or isinstance(value, int):
-                return float(value)
-            try:
-                return float(str(value))
-            except Exception:
-                return default
-
-        self.policy_lr = _parse_float(training_cfg.get("policy_lr", 3e-4), 3e-4)
-        self.dynamics_lr = _parse_float(training_cfg.get("dynamics_lr", 1e-4), 1e-4)
-        self.batch_size = training_cfg.get("batch_size", 256)
-        self.real_ratio = training_cfg.get("real_ratio", 0.05)
-        self.model_rollout_length = training_cfg.get("model_rollout_length", 1)
-        self.model_rollout_batch_size = training_cfg.get("model_rollout_batch_size", 100000)
+        self.batch_size = train_cfg.get("batch_size", 64)
+        self.seq_len = train_cfg.get("seq_len", 32)
+        self.gamma = train_cfg.get("gamma", 0.99)
+        self.z_dim = model_cfg.get("z_dim", 32)
+        self.hidden_dim = model_cfg.get("hidden_dim", 256)
         
-        # PPO parameters
-        self.clip_range = config.get("ppo", {}).get("clip_range", 0.2)
-        self.ent_coef = config.get("ppo", {}).get("ent_coef", 0.01)
-        self.vf_coef = config.get("ppo", {}).get("vf_coef", 0.5)
-        self.max_grad_norm = config.get("ppo", {}).get("max_grad_norm", 0.5)
-        # Safety threshold: skip applying extremely large updates
-        self.grad_norm_skip_threshold = (
-            training_cfg.get("grad_norm_skip_threshold", 10.0)
-        )
-        
-        # Create models
-        self.actor_critic = ActorCritic(
-            num_actions=num_actions,
-            in_channels=obs_shape[0],
-            fc_dim=model_cfg.get("fc_dim", 512),
+        # Models
+        self.vae = VAE(in_channels=obs_shape[0], z_dim=self.z_dim).to(device)
+        self.mdnrnn = MDNRNN(
+            z_dim=self.z_dim, 
+            action_dim=num_actions, 
+            hidden_dim=self.hidden_dim, 
+            n_gaussians=model_cfg.get("n_gaussians", 5)
         ).to(device)
-        
-        self.dynamics = DynamicsEnsemble(
-            ensemble_size=model_cfg.get("ensemble_size", 5),
-            num_actions=num_actions,
-            in_channels=obs_shape[0],
-            hidden_dim=model_cfg.get("dynamics_hidden_dim", 256),
-            fc_dim=model_cfg.get("fc_dim", 512),
+        self.controller = WorldModelsController(
+            z_dim=self.z_dim, 
+            hidden_dim=self.hidden_dim, 
+            action_dim=num_actions
         ).to(device)
         
         # Optimizers
-        self.policy_optimizer = torch.optim.Adam(
-            self.actor_critic.parameters(),
-            lr=self.policy_lr,
-        )
-        self.dynamics_optimizer = torch.optim.Adam(
-            self.dynamics.parameters(),
-            lr=self.dynamics_lr,
-        )
+        self.vae_opt = torch.optim.Adam(self.vae.parameters(), lr=train_cfg.get("vae_lr", 1e-4))
+        self.mdnrnn_opt = torch.optim.Adam(self.mdnrnn.parameters(), lr=train_cfg.get("mdnrnn_lr", 1e-3))
+        self.ctrl_opt = torch.optim.Adam(self.controller.parameters(), lr=train_cfg.get("controller_lr", 1e-4))
         
-        # Replay buffers
-        buffer_size = training_cfg.get("buffer_size", 10000)
-        self.real_buffer = ReplayBuffer(buffer_size, obs_shape, device)
-        self.model_buffer = ModelReplayBuffer(buffer_size, obs_shape, device)
-        self.mixed_buffer = MixedReplayBuffer(
-            self.real_buffer, self.model_buffer, self.real_ratio
-        )
+        # Buffer
+        self.buffer = ReplayBuffer(train_cfg.get("buffer_size", 100000), obs_shape, device)
         
-        # Training state
-        self.total_steps = 0
-        self.dynamics_trained = False
-    
-    def get_action(
-        self,
-        state: np.ndarray,
-        deterministic: bool = False,
-    ) -> Tuple[np.ndarray, Dict]:
-        """
-        Select actions for a batch of states.
+        # Runtime State
+        self.vae_trained = False
+        self.mdnrnn_trained = False
+        self.rnn_hidden = None # Current episode hidden state
         
-        Args:
-            state: Observation array (batch_size, C, H, W) or single (C, H, W)
-            deterministic: Whether to use deterministic actions
-        
-        Returns:
-            actions: Selected actions array (batch_size,) or single int
-            info: Dictionary with batched log_probs and values
-        """
+    def get_action(self, obs, deterministic=False):
+        """Act using Controller on (z, h)."""
         with torch.no_grad():
-            # Handle single state case for compatibility
-            is_single = len(state.shape) == 3
-            if is_single:
-                state = np.expand_dims(state, 0)
-
-            state_tensor = torch.from_numpy(state).float().to(self.device)
+            # Handle input formatting
+            if isinstance(obs, np.ndarray):
+                obs = torch.from_numpy(obs).float().to(self.device)
+            if obs.dim() == 3: 
+                obs = obs.unsqueeze(0)
             
-            logits, _ = self.actor_critic.forward(state_tensor)
-            actions, log_probs, entropies, values = self.actor_critic.get_action_and_value(
-                state_tensor, deterministic=deterministic
-            )
-        
-        actions_np = actions.cpu().numpy()
-        
-        # If input was single, return single action and scalar info
-        if is_single:
-            return actions_np[0], {
-                "log_prob": log_probs[0].cpu().item(),
-                "value": values[0].cpu().item(),
-                "entropy": entropies[0].cpu().item(),
-                "logits_std": logits[0].std().cpu().item(),
-            }
+            # 1. VAE Encode
+            mu, _ = self.vae.encode(obs)
+            z = mu # Use mean for stability
+            
+            # 2. RNN State Management
+            B = z.size(0)
+            if self.rnn_hidden is None or self.rnn_hidden[0].size(1) != B:
+                h = torch.zeros(1, B, self.hidden_dim, device=self.device)
+                c = torch.zeros(1, B, self.hidden_dim, device=self.device)
+                self.rnn_hidden = (h, c)
+            
+            # 3. Controller Act (Use previous h)
+            h_prev = self.rnn_hidden[0].squeeze(0)
+            action, log_prob = self.controller.get_action(z, h_prev, deterministic)
+            
+            # 4. RNN Step (Predict next h for next step)
+            _, _, _, _, _, self.rnn_hidden = self.mdnrnn(z, action, self.rnn_hidden)
+            
+            return action.cpu().numpy(), log_prob.cpu().numpy()
 
-        # Otherwise, return batch
-        return actions_np, {
-            "log_prob": log_probs.cpu().numpy(),
-            "value": values.cpu().numpy(),
-            "entropy": entropies.cpu().numpy(),
-            "logits_std": logits.std(dim=-1).mean().cpu().item(),
-        }
-    
-    def store_transition(
-        self,
-        state: np.ndarray,
-        action: int,
-        reward: float,
-        next_state: np.ndarray,
-        done: bool,
-    ) -> None:
-        """Store transition in real buffer."""
-        self.real_buffer.add(state, action, reward, next_state, done)
-    
-    def train_dynamics(self, n_updates: int = 1) -> Dict[str, float]:
-        """
-        Train dynamics ensemble on real data.
-        
-        Args:
-            n_updates: Number of gradient updates
-        
-        Returns:
-            Dictionary of training metrics
-        """
-        if not self.real_buffer.is_ready(self.batch_size):
+    def store_transition(self, s, a, r, ns, d):
+        self.buffer.add(s, a, r, ns, d)
+        if d: 
+            self.rnn_hidden = None
+
+    def update(self):
+        # Wait for enough data to form sequences
+        if not self.buffer.is_ready(self.batch_size * 5): 
             return {}
         
-        total_metrics = {}
-        
-        for _ in range(n_updates):
-            batch = self.real_buffer.sample(self.batch_size)
-            
-            loss, metrics = self.dynamics.compute_loss(
-                batch.states,
-                batch.actions,
-                batch.next_states,
-                batch.rewards,
-            )
-            
-            self.dynamics_optimizer.zero_grad(set_to_none=True)  # More memory efficient
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.dynamics.parameters(), self.max_grad_norm)
-            self.dynamics_optimizer.step()
-            
-            for k, v in metrics.items():
-                total_metrics[k] = total_metrics.get(k, 0) + v / n_updates
-            
-            # Explicit cleanup
-            del batch, loss
-        
-        self.dynamics_trained = True
-        return total_metrics
-    
-    def generate_model_rollouts(self) -> int:
-        """
-        Generate synthetic rollouts using dynamics ensemble.
-        
-        Memory-optimized for 4GB GPUs.
-        
-        Returns:
-            Number of transitions generated
-        """
-        if not self.dynamics_trained or not self.real_buffer.is_ready(self.batch_size * 5):
-            return 0
-        
-        total_transitions = 0
-        model_idx = 0  # Always use first model for consistency
-        
-        # Process in small chunks
-        chunk_size = 32  # Very small to minimize memory
-        num_chunks = max(1, self.model_rollout_batch_size // chunk_size)
-        
-        for _ in range(num_chunks):
-            batch = self.real_buffer.sample(chunk_size)
-            states = batch.states.clone()  # Clone to avoid reference issues
-            del batch  # Free the batch immediately
-            
-            with torch.no_grad():
-                for _ in range(self.model_rollout_length):
-                    actions, _, _, _ = self.actor_critic.get_action_and_value(states)
-                    
-                    next_states, rewards, _ = self.dynamics.predict_next_state(
-                        states, actions, model_idx=model_idx, use_mean=True
-                    )
-                    
-                    dones = torch.zeros(chunk_size, device=self.device)
-                    
-                    # Convert to numpy and add to buffer
-                    s_np = states.cpu().numpy()
-                    a_np = actions.cpu().numpy()
-                    r_np = rewards.squeeze(-1).cpu().numpy()
-                    ns_np = next_states.cpu().numpy()
-                    d_np = dones.cpu().numpy()
-                    
-                    self.model_buffer.buffer.add_batch(s_np, a_np, r_np, ns_np, d_np)
-                    
-                    total_transitions += chunk_size
-                    
-                    # Update states for next rollout step
-                    states = next_states.detach()
-                    
-                    # Clean up numpy arrays
-                    del s_np, a_np, r_np, ns_np, d_np
-            
-            # Clean up tensors after each chunk
-            del states, actions, next_states, rewards, dones
-            torch.cuda.empty_cache()
-        
-        return total_transitions
-    
-    def update_policy(self, n_updates: int = 1) -> Dict[str, float]:
-        """
-        Update policy using PPO on mixed real/model data.
-        
-        Args:
-            n_updates: Number of gradient updates
-        
-        Returns:
-            Dictionary of training metrics
-        """
-        if not self.real_buffer.is_ready(self.batch_size):
-            return {}
-        
-        total_metrics = {}
-        
-        for _ in range(n_updates):
-            # Sample mixed batch
-            batch = self.mixed_buffer.sample(self.batch_size)
-            
-            # Get current policy outputs
-            # Also compute logits diagnostics to detect blowups that zero entropy
-            logits, _ = self.actor_critic.forward(batch.states)
-            _, log_probs, entropy, values = self.actor_critic.get_action_and_value(
-                batch.states, action=batch.actions
-            )
-            
-            # Compute returns and advantages (simple 1-step)
-            with torch.no_grad():
-                _, _, _, next_values = self.actor_critic.get_action_and_value(
-                    batch.next_states
-                )
-                targets = batch.rewards + self.gamma * next_values * (1 - batch.dones)
-            
-            advantages = targets - values
-            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-            
-            # Policy loss (simple policy gradient)
-            policy_loss = -(log_probs * advantages.detach()).mean()
-            
-            # Value loss
-            value_loss = F.mse_loss(values, targets)
-            
-            # Entropy bonus - use NEGATIVE entropy loss to MAXIMIZE entropy
-            # Higher entropy = more exploration
-            mean_entropy = entropy.mean()
-            entropy_loss = -mean_entropy  # Negative because we want to maximize entropy
-            
-            # Total loss: minimize policy_loss + value_loss, maximize entropy
-            # So we ADD ent_coef * entropy_loss (which is negative of entropy)
-            # Actually we want: loss = policy_loss + vf*value_loss - ent_coef*entropy
-            # Which is: loss = policy_loss + vf*value_loss + ent_coef*(-entropy)
-            loss = policy_loss + self.vf_coef * value_loss + self.ent_coef * entropy_loss
-            
-            self.policy_optimizer.zero_grad(set_to_none=True)
-            loss.backward()
-            # Clip gradients and capture gradient norm for logging/diagnostics
-            grad_norm = torch.nn.utils.clip_grad_norm_(
-                self.actor_critic.parameters(), self.max_grad_norm
-            )
-
-            # Safety: if the pre-clip grad norm is extremely large, skip the update
-            # to avoid catastrophic parameter changes that blow up logits/entropy.
-            updates_skipped = 0
-            if grad_norm > self.grad_norm_skip_threshold:
-                # Skip stepping this update
-                updates_skipped = 1
-                # Zero grads to avoid accidental application
-                self.policy_optimizer.zero_grad(set_to_none=True)
-            else:
-                self.policy_optimizer.step()
-            
-            metrics = {
-                "policy/loss": policy_loss.item(),
-                "policy/value_loss": value_loss.item(),
-                "policy/entropy": mean_entropy.item(),
-                "policy/total_loss": loss.item(),
-                "policy/grad_norm": float(grad_norm) if isinstance(grad_norm, (float, int)) else grad_norm,
-                "policy/mean_advantage": advantages.mean().item(),
-                "policy/mean_value": values.mean().item(),
-                # Log logits statistics for diagnostics (detect numerical blowup)
-                "policy/logits_max_abs": float(logits.abs().max().detach().cpu().item()),
-                "policy/logits_std": float(logits.detach().cpu().std().item()),
-                "policy/updates_skipped": updates_skipped,
-            }
-            
-            for k, v in metrics.items():
-                total_metrics[k] = total_metrics.get(k, 0) + v / n_updates
-            
-            # Cleanup
-            del batch, loss
-        
-        return total_metrics
-    
-    def update(self) -> Dict[str, float]:
-        """
-        Single update step combining dynamics and policy training.
-        
-        Returns:
-            Combined metrics dictionary
-        """
         metrics = {}
-        
-        # Train dynamics on real data
-        dynamics_metrics = self.train_dynamics(n_updates=1)
-        metrics.update(dynamics_metrics)
-        
-        # Generate model rollouts
-        n_generated = self.generate_model_rollouts()
-        metrics["model/generated_transitions"] = n_generated
-        
-        # Update policy on mixed data
-        policy_metrics = self.update_policy(n_updates=1)
-        metrics.update(policy_metrics)
-        
-        # Buffer stats
-        metrics["buffer/real_size"] = len(self.real_buffer)
-        metrics["buffer/model_size"] = len(self.model_buffer)
-        
+        metrics.update(self._train_vae())
+        metrics.update(self._train_mdnrnn())
+        metrics.update(self._train_controller())
         return metrics
-    
-    def save(self, path: str) -> None:
-        """Save agent state."""
-        torch.save({
-            "actor_critic": self.actor_critic.state_dict(),
-            "dynamics": self.dynamics.state_dict(),
-            "policy_optimizer": self.policy_optimizer.state_dict(),
-            "dynamics_optimizer": self.dynamics_optimizer.state_dict(),
-            "total_steps": self.total_steps,
-        }, path)
-    
-    def load(self, path: str) -> None:
-        """Load agent state."""
-        checkpoint = torch.load(path, map_location=self.device)
-        self.actor_critic.load_state_dict(checkpoint["actor_critic"])
-        self.dynamics.load_state_dict(checkpoint["dynamics"])
-        self.policy_optimizer.load_state_dict(checkpoint["policy_optimizer"])
-        self.dynamics_optimizer.load_state_dict(checkpoint["dynamics_optimizer"])
-        self.total_steps = checkpoint.get("total_steps", 0)
-        self.dynamics_trained = True
 
-
-class DDQNAgent:
-    """
-    Double DQN Agent for comparison benchmarks.
-    
-    Implements Double DQN with dueling architecture as a baseline
-    for comparing against MBPO.
-    """
-    
-    def __init__(
-        self,
-        obs_shape: Tuple[int, ...] = (4, 84, 84),
-        num_actions: int = 4,
-        config: Dict = None,
-        device: str = "cuda",
-    ) -> None:
-        from models import QNetwork
+    def _train_vae(self):
+        batch = self.buffer.sample(self.batch_size)
         
+        # FIX: Normalize 0-255 -> 0-1
+        states_norm = batch.states / 255.0
+        
+        loss, m = self.vae.compute_loss(states_norm)
+        
+        self.vae_opt.zero_grad()
+        loss.backward()
+        self.vae_opt.step()
+        self.vae_trained = True
+        return m
+
+    def _train_mdnrnn(self):
+        if not self.vae_trained: return {}
+        # Sample Sequences (already normalized in utils.py sample_sequence)
+        batch = self.buffer.sample_sequence(self.batch_size, self.seq_len)
+        states = batch["states"]     # (B, L, C, H, W)
+        actions = batch["actions"]   # (B, L)
+        rewards = batch["rewards"].unsqueeze(-1)
+        dones = batch["dones"].unsqueeze(-1)
+        next_states = batch["next_states"]
+        
+        B, L = states.shape[:2]
+        
+        # Pre-compute Latents (Stop Gradients to VAE to save VRAM/Stability)
+        with torch.no_grad():
+            s_flat = states.view(B*L, *states.shape[2:])
+            ns_flat = next_states.view(B*L, *states.shape[2:])
+            z, _ = self.vae.encode(s_flat)
+            z_next, _ = self.vae.encode(ns_flat)
+            z = z.view(B, L, -1)
+            z_next = z_next.view(B, L, -1)
+
+        # Forward RNN
+        pi, mu, sigma, pred_r, pred_d, _ = self.mdnrnn(z, actions)
+        
+        # Losses
+        # 1. MDN Loss (Negative Log Likelihood)
+        z_target = z_next.view(B*L, 1, -1) # (N, 1, Z)
+        mu_flat = mu.view(B*L, 5, -1)      # (N, G, Z)
+        sigma_flat = sigma.view(B*L, 5, -1)
+        pi_flat = pi.view(B*L, 5)
+        
+        # log_prob per component
+        log_prob_g = -0.5 * (torch.sum(((z_target - mu_flat)**2) / sigma_flat**2, dim=2) + 
+                             torch.sum(torch.log(2 * np.pi * sigma_flat**2), dim=2))
+        
+        # LogSumExp to combine mixture
+        log_prob = torch.logsumexp(torch.log(pi_flat + 1e-8) + log_prob_g, dim=1)
+        loss_mdn = -log_prob.mean()
+        
+        loss_r = F.mse_loss(pred_r.view(B*L, 1), rewards.view(B*L, 1))
+        loss_d = F.binary_cross_entropy(pred_d.view(B*L, 1), dones.view(B*L, 1))
+        
+        total_loss = loss_mdn + loss_r + loss_d
+        
+        self.mdnrnn_opt.zero_grad()
+        total_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.mdnrnn.parameters(), 5.0)
+        self.mdnrnn_opt.step()
+        
+        self.mdnrnn_trained = True
+        return {"mdnrnn/loss": total_loss.item(), "mdnrnn/nll": loss_mdn.item()}
+
+    def _train_controller(self):
+        if not self.mdnrnn_trained: return {}
+        
+        # Start dreaming from real states
+        batch = self.buffer.sample(self.batch_size)
+        
+        # Normalize!
+        states_norm = batch.states / 255.0
+        
+        with torch.no_grad():
+            z, _ = self.vae.encode(states_norm)
+            
+        h = torch.zeros(1, self.batch_size, self.hidden_dim, device=self.device)
+        c = torch.zeros(1, self.batch_size, self.hidden_dim, device=self.device)
+        hidden = (h, c)
+        
+        log_probs = []
+        rewards = []
+        
+        # Dream Rollout
+        for _ in range(15):
+            h_in = hidden[0].squeeze(0)
+            
+            # --- SAFETY CHECK ---
+            if torch.isnan(z).any() or torch.isnan(h_in).any():
+                return {} # Abort update if NaNs detected
+            # --------------------
+
+            action, log_prob = self.controller.get_action(z, h_in)
+            
+            with torch.no_grad():
+                z, r, d, hidden = self.mdnrnn.sample_next_latent(z, action, hidden)
+            
+            log_probs.append(log_prob)
+            rewards.append(r.squeeze(-1))
+            
+        # REINFORCE Update
+        R = torch.zeros(self.batch_size, device=self.device)
+        policy_loss = 0
+        returns = []
+        
+        for r in reversed(rewards):
+            R = r + self.gamma * R
+            returns.insert(0, R)
+        returns = torch.stack(returns)
+        # Normalize returns
+        returns = (returns - returns.mean()) / (returns.std() + 1e-8)
+        
+        for lp, ret in zip(log_probs, returns):
+            policy_loss += -(lp * ret).mean()
+            
+        self.ctrl_opt.zero_grad()
+        policy_loss.backward()
+        
+        # Clip gradients to prevent explosion
+        torch.nn.utils.clip_grad_norm_(self.controller.parameters(), 1.0)
+        
+        self.ctrl_opt.step()
+        
+        return {"controller/loss": policy_loss.item()}
+
+    def save(self, path):
+        torch.save({
+            "vae": self.vae.state_dict(),
+            "mdnrnn": self.mdnrnn.state_dict(),
+            "controller": self.controller.state_dict(),
+            "vae_opt": self.vae_opt.state_dict(),
+            "mdnrnn_opt": self.mdnrnn_opt.state_dict(),
+            "ctrl_opt": self.ctrl_opt.state_dict()
+        }, path)
+        
+    def load(self, path):
+        ckpt = torch.load(path, map_location=self.device)
+        self.vae.load_state_dict(ckpt["vae"])
+        self.mdnrnn.load_state_dict(ckpt["mdnrnn"])
+        self.controller.load_state_dict(ckpt["controller"])
+        self.vae_trained = True
+        self.mdnrnn_trained = True
+
+
+# =============================================================================
+# MBPO Agent (Preserved from your original code)
+# =============================================================================
+
+class MBPOAgent:
+    def __init__(self, obs_shape, num_actions, config, device="cuda"):
         self.obs_shape = obs_shape
         self.num_actions = num_actions
         self.device = device
         
-        config = config or {}
-        training_cfg = config.get("training", {})
-        ddqn_cfg = config.get("ddqn", {})
+        train_cfg = config.get("training", {})
         model_cfg = config.get("model", {})
         
-        # Parameters
-        self.gamma = training_cfg.get("gamma", 0.99)
-        self.lr = training_cfg.get("policy_lr", 3e-4)
-        self.batch_size = training_cfg.get("batch_size", 256)
-        self.target_update_freq = training_cfg.get("target_update_freq", 10000)
+        self.gamma = train_cfg.get("gamma", 0.99)
+        self.batch_size = train_cfg.get("batch_size", 256)
+        self.model_rollout_length = train_cfg.get("model_rollout_length", 1)
         
-        # Epsilon parameters
-        self.epsilon = ddqn_cfg.get("epsilon_start", 1.0)
-        self.epsilon_end = ddqn_cfg.get("epsilon_end", 0.01)
-        self.epsilon_decay = ddqn_cfg.get("epsilon_decay", 0.995)
-        
-        # Networks
-        self.q_network = QNetwork(
+        # Models
+        self.actor_critic = ActorCritic(num_actions, obs_shape[0], model_cfg.get("fc_dim", 512)).to(device)
+        self.dynamics = DynamicsEnsemble(
+            ensemble_size=model_cfg.get("ensemble_size", 5),
             num_actions=num_actions,
-            in_channels=obs_shape[0],
-            fc_dim=model_cfg.get("fc_dim", 512),
-            dueling=True,
+            in_channels=obs_shape[0]
         ).to(device)
         
-        self.target_network = QNetwork(
-            num_actions=num_actions,
-            in_channels=obs_shape[0],
-            fc_dim=model_cfg.get("fc_dim", 512),
-            dueling=True,
-        ).to(device)
-        self.target_network.load_state_dict(self.q_network.state_dict())
+        self.policy_optimizer = torch.optim.Adam(self.actor_critic.parameters(), lr=train_cfg.get("policy_lr", 3e-4))
+        self.dynamics_optimizer = torch.optim.Adam(self.dynamics.parameters(), lr=train_cfg.get("dynamics_lr", 1e-4))
         
-        self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=self.lr)
+        # Buffers
+        self.real_buffer = ReplayBuffer(train_cfg.get("buffer_size", 100000), obs_shape, device)
+        self.model_buffer = ModelReplayBuffer(train_cfg.get("buffer_size", 100000), obs_shape, device)
+        self.mixed_buffer = MixedReplayBuffer(self.real_buffer, self.model_buffer, train_cfg.get("real_ratio", 0.1))
         
-        # Buffer
-        buffer_size = training_cfg.get("buffer_size", 1000000)
-        self.buffer = ReplayBuffer(buffer_size, obs_shape, device)
-        
-        self.total_steps = 0
-    
-    def get_action(
-        self,
-        state: np.ndarray,
-        deterministic: bool = False,
-    ) -> Tuple[int, Dict]:
-        """Select action using epsilon-greedy."""
-        if not deterministic and np.random.random() < self.epsilon:
-            action = np.random.randint(0, self.num_actions)
-        else:
-            with torch.no_grad():
-                state_tensor = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
-                q_values = self.q_network(state_tensor)
-                action = q_values.argmax(dim=-1).cpu().item()
-        
-        return action, {"epsilon": self.epsilon}
-    
-    def store_transition(
-        self,
-        state: np.ndarray,
-        action: int,
-        reward: float,
-        next_state: np.ndarray,
-        done: bool,
-    ) -> None:
-        """Store transition in buffer."""
-        self.buffer.add(state, action, reward, next_state, done)
-    
-    def update(self) -> Dict[str, float]:
-        """Update Q-network."""
-        if not self.buffer.is_ready(self.batch_size):
-            return {}
-        
-        batch = self.buffer.sample(self.batch_size)
-        
-        # Current Q values
-        q_values = self.q_network(batch.states)
-        q_values = q_values.gather(1, batch.actions.unsqueeze(1)).squeeze(1)
-        
-        # Double DQN: use online network to select action, target to evaluate
-        with torch.no_grad():
-            next_actions = self.q_network(batch.next_states).argmax(dim=-1)
-            next_q_values = self.target_network(batch.next_states)
-            next_q_values = next_q_values.gather(1, next_actions.unsqueeze(1)).squeeze(1)
-            targets = batch.rewards + self.gamma * next_q_values * (1 - batch.dones)
-        
-        loss = F.huber_loss(q_values, targets)
-        
-        self.optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 10.0)
-        self.optimizer.step()
-        
-        # Update target network
-        self.total_steps += 1
-        if self.total_steps % self.target_update_freq == 0:
-            self.target_network.load_state_dict(self.q_network.state_dict())
-        
-        # Decay epsilon
-        self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
-        
-        return {
-            "ddqn/loss": loss.item(),
-            "ddqn/q_mean": q_values.mean().item(),
-            "ddqn/epsilon": self.epsilon,
-        }
-    
-    def save(self, path: str) -> None:
-        """Save agent state."""
-        torch.save({
-            "q_network": self.q_network.state_dict(),
-            "target_network": self.target_network.state_dict(),
-            "optimizer": self.optimizer.state_dict(),
-            "epsilon": self.epsilon,
-            "total_steps": self.total_steps,
-        }, path)
-    
-    def load(self, path: str) -> None:
-        """Load agent state."""
-        checkpoint = torch.load(path, map_location=self.device)
-        self.q_network.load_state_dict(checkpoint["q_network"])
-        self.target_network.load_state_dict(checkpoint["target_network"])
-        self.optimizer.load_state_dict(checkpoint["optimizer"])
-        self.epsilon = checkpoint.get("epsilon", self.epsilon_end)
-        self.total_steps = checkpoint.get("total_steps", 0)
+        self.dynamics_trained = False
 
+    def get_action(self, state, deterministic=False):
+        with torch.no_grad():
+            if isinstance(state, np.ndarray):
+                state = torch.from_numpy(state).float().to(self.device)
+            if state.dim() == 3: state = state.unsqueeze(0)
+            
+            action, log_prob, _, _ = self.actor_critic.get_action_and_value(state, deterministic=deterministic)
+            return action.cpu().numpy(), {"log_prob": log_prob.cpu().numpy()}
+
+    def store_transition(self, s, a, r, ns, d):
+        self.real_buffer.add(s, a, r, ns, d)
+
+    def update(self):
+        if not self.real_buffer.is_ready(self.batch_size): return {}
+        
+        # 1. Train Dynamics
+        dyn_loss = 0
+        batch = self.real_buffer.sample(self.batch_size)
+        loss, _ = self.dynamics.compute_loss(batch.states, batch.actions, batch.next_states, batch.rewards)
+        self.dynamics_optimizer.zero_grad()
+        loss.backward()
+        self.dynamics_optimizer.step()
+        self.dynamics_trained = True
+        
+        # 2. Rollout
+        if self.dynamics_trained:
+            self._generate_rollouts()
+            
+        # 3. Train Policy
+        batch = self.mixed_buffer.sample(self.batch_size)
+        _, log_prob, entropy, value = self.actor_critic.get_action_and_value(batch.states, batch.actions)
+        
+        # PPO/A2C style loss (Simplified)
+        with torch.no_grad():
+            _, _, _, next_val = self.actor_critic.get_action_and_value(batch.next_states)
+            target = batch.rewards + self.gamma * next_val * (1 - batch.dones)
+            adv = target - value
+        
+        loss_p = -(log_prob * adv).mean()
+        loss_v = F.mse_loss(value, target)
+        loss = loss_p + 0.5 * loss_v - 0.01 * entropy.mean()
+        
+        self.policy_optimizer.zero_grad()
+        loss.backward()
+        self.policy_optimizer.step()
+        
+        return {"policy/loss": loss.item()}
+
+    def _generate_rollouts(self):
+        batch = self.real_buffer.sample(256) # Rollout batch size
+        state = batch.states
+        for _ in range(self.model_rollout_length):
+            action, _, _, _ = self.actor_critic.get_action_and_value(state)
+            next_state, reward, _ = self.dynamics.predict_next_state(state, action)
+            # Add to model buffer (simplified add_batch)
+            self.model_buffer.buffer.add_batch(
+                state.cpu().numpy(), 
+                action.cpu().numpy(), 
+                reward.squeeze(-1).cpu().numpy(), 
+                next_state.cpu().numpy(), 
+                torch.zeros_like(reward).squeeze(-1).cpu().numpy() # Assume not done in model rollout
+            )
+            state = next_state
+
+    def save(self, path):
+        torch.save(self.actor_critic.state_dict(), path)
+    def load(self, path):
+        self.actor_critic.load_state_dict(torch.load(path))
+
+
+# =============================================================================
+# DDQN Agent
+# =============================================================================
+
+class DDQNAgent:
+    def __init__(self, obs_shape, num_actions, config, device="cuda"):
+        self.q_net = QNetwork(num_actions, obs_shape[0]).to(device)
+        self.target_net = QNetwork(num_actions, obs_shape[0]).to(device)
+        self.target_net.load_state_dict(self.q_net.state_dict())
+        self.opt = torch.optim.Adam(self.q_net.parameters(), lr=1e-4)
+        self.buffer = ReplayBuffer(100000, obs_shape, device)
+        self.device = device
+        self.num_actions = num_actions
+        self.epsilon = 1.0
+
+    def get_action(self, state, deterministic=False):
+        if not deterministic and np.random.random() < self.epsilon:
+            return np.random.randint(0, self.num_actions), {}
+        with torch.no_grad():
+            if isinstance(state, np.ndarray):
+                state = torch.from_numpy(state).float().to(self.device)
+            if state.dim() == 3: state = state.unsqueeze(0)
+            return self.q_net(state).argmax(dim=1).cpu().numpy(), {}
+
+    def store_transition(self, s, a, r, ns, d):
+        self.buffer.add(s, a, r, ns, d)
+
+    def update(self):
+        if not self.buffer.is_ready(64): return {}
+        batch = self.buffer.sample(64)
+        
+        q = self.q_net(batch.states).gather(1, batch.actions.unsqueeze(1)).squeeze(1)
+        with torch.no_grad():
+            next_a = self.q_net(batch.next_states).argmax(1)
+            next_q = self.target_net(batch.next_states).gather(1, next_a.unsqueeze(1)).squeeze(1)
+            target = batch.rewards + 0.99 * next_q * (1 - batch.dones)
+            
+        loss = F.mse_loss(q, target)
+        self.opt.zero_grad()
+        loss.backward()
+        self.opt.step()
+        
+        self.epsilon = max(0.01, self.epsilon * 0.995)
+        return {"loss": loss.item()}
+    
+    def save(self, path): torch.save(self.q_net.state_dict(), path)
+    def load(self, path): self.q_net.load_state_dict(torch.load(path))
+
+
+# =============================================================================
+# Factory
+# =============================================================================
 
 def create_agent(algorithm: str, obs_shape: Tuple, num_actions: int, config: Dict, device: str):
-    """Factory function to create agents."""
     if algorithm == "mbpo":
         return MBPOAgent(obs_shape, num_actions, config, device)
     elif algorithm == "ddqn":
         return DDQNAgent(obs_shape, num_actions, config, device)
+    elif algorithm == "world_models":
+        return WorldModelsAgent(obs_shape, num_actions, config, device)
     else:
         raise ValueError(f"Unknown algorithm: {algorithm}")

@@ -5,6 +5,43 @@
 
 A modular, production-ready MBRL framework that implements MBPO with support for PPO, SAC, and DDQN benchmarks.
 
+## ⚡ Quick Start
+
+**All components tested and working!** ✓
+
+```bash
+# 1. Install dependencies
+pip install torch numpy gymnasium ale-py opencv-python pyyaml wandb tqdm matplotlib
+pip install autorom[accept-rom-license]
+
+# 2. Test setup
+python test_setup.py
+
+# 3. Quick test (5 minutes)
+python src/main.py --config config/config_debug.yaml --no-wandb
+
+# 4. Full training
+python src/main.py
+```
+
+See [QUICK_START.md](QUICK_START.md) for detailed instructions.
+
+## 📚 Documentation
+
+- **[SUMMARY.md](SUMMARY.md)** - Overview of fixes and implementation
+- **[QUICK_START.md](QUICK_START.md)** - Step-by-step usage guide  
+- **[FIXES_AND_IMPROVEMENTS.md](FIXES_AND_IMPROVEMENTS.md)** - Detailed technical explanations
+- **[test_setup.py](test_setup.py)** - Quick verification script
+
+## 🔑 Key Features
+
+✓ **Correct MBPO Implementation** - 5% real data, 95% model data (as per paper)  
+✓ **Dynamics Ensemble** - 5 models for uncertainty estimation  
+✓ **Delta State Prediction** - Learns changes, not full states  
+✓ **Memory Optimized** - Works on standard hardware  
+✓ **Wandb Integration** - Real-time monitoring and videos  
+✓ **Modular Design** - Easy to swap algorithms (MBPO/DDQN/PPO)
+
 ## 📁 Project Structure
 
 ```

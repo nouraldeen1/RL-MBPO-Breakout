@@ -1,0 +1,58 @@
+# =============================================================================
+# World Models Configuration (Breakout)
+# =============================================================================
+
+algorithm: "world_models"
+seed: 42
+
+# Environment
+env:
+  name: "BreakoutNoFrameskip-v4"
+  num_envs: 2 # Fewer envs needed as we learn from buffer
+  frame_stack: 4
+  frame_size: 84
+  noop_max: 30
+  frame_skip: 4
+  record_video: true
+  video_trigger_freq: 50
+  video_dir: "videos"
+
+# Training
+training:
+  total_timesteps: 1_000_000
+  buffer_size: 100_000
+  batch_size: 64
+  seq_len: 16 # CRITICAL: Length of sequences for RNN training
+  learning_starts: 5_000
+  gamma: 0.99
+
+  # Learning Rates
+  vae_lr: 0.0005 # Lower LR for stability
+  mdnrnn_lr: 0.001
+  controller_lr: 0.0001 # Policy gradient needs small steps
+
+  train_freq: 4
+
+# Model Architecture
+model:
+  z_dim: 32 # Latent size
+  hidden_dim: 256 # RNN hidden size
+  n_gaussians: 5
+  fc_dim: 512
+
+# Early Stopping
+early_stopping:
+  enabled: false
+  target_reward: 50.0 # Initial target to prove it works
+  window_size: 10
+  patience: 1000
+
+# Logging
+logging:
+  log_freq: 1000
+  save_freq: 50_000
+  checkpoint_dir: "checkpoints"
+
+wandb:
+  enabled: false
+  project: "WorldModels-Breakout"

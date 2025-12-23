@@ -5,6 +5,9 @@
 # CMPS458 - Reinforcement Learning Project
 # =============================================================================
 
+# Random seed for reproducibility
+seed: 42
+
 # Environment Configuration
 env:
   name: "BreakoutNoFrameskip-v4"
@@ -19,27 +22,27 @@ env:
 
 # Training Configuration
 debug:
-  action_debug_steps: 10000
-  action_log_freq: 1000
+  action_debug_steps: 50000 # Debug action distribution for first 50k steps
+  action_log_freq: 5000 # Log action counts every 5k steps
 
 training:
-  total_timesteps: 1_000_000 # Total environment steps
-  buffer_size: 100_000 # Replay buffer capacity
-  batch_size: 64 # Batch size for updates (small for memory)
-  learning_starts: 20_000 # Steps before training starts
-  # Steps before training starts
+  total_timesteps: 2_000_000 # Total environment steps (increased for better training)
+  buffer_size: 50_000 # Replay buffer capacity (reduced for memory efficiency)
+  batch_size: 256 # Batch size for updates (increased for stability)
+  learning_starts: 10_000 # Steps before training starts (reduced)
   gamma: 0.99 # Discount factor
   tau: 0.005 # Soft update coefficient
+  grad_norm_skip_threshold: 10.0 # Skip updates with grad norm > this
 
   # Learning rates
-  policy_lr: 3e-5 # Policy network learning rate (reduced to stabilize updates)
-  dynamics_lr: 1e-4 # Dynamics model learning rate
+  policy_lr: 3e-4 # Policy network learning rate (standard for Atari)
+  dynamics_lr: 1e-3 # Dynamics model learning rate (increased for faster learning)
 
   # MBPO specific
-  model_rollout_freq: 1000 # Steps between model rollouts
-  model_rollout_length: 1 # Horizon for model rollouts (keep short)
-  model_rollout_batch_size: 256 # Batch size for model rollouts (small)
-  real_ratio: 0.8 # Ratio of real vs model data (favor real data to reduce model bias)
+  model_rollout_freq: 250 # Steps between model rollouts (more frequent)
+  model_rollout_length: 1 # Horizon for model rollouts (keep short for Atari)
+  model_rollout_batch_size: 400 # Batch size for model rollouts
+  real_ratio: 0.05 # Ratio of real data in mixed batch (5% real, 95% model - MBPO paper)
 
   # Update frequencies
   train_freq: 4 # Environment steps between updates
@@ -52,24 +55,24 @@ model:
   cnn_channels: [ 32, 64, 64 ] # Conv layer output channels
   cnn_kernels: [ 8, 4, 3 ] # Conv layer kernel sizes
   cnn_strides: [ 4, 2, 1 ] # Conv layer strides
-  fc_dim: 256 # Fully connected layer dimension
+  fc_dim: 512 # Fully connected layer dimension (increased)
 
   # Dynamics Ensemble (MBPO Core)
-  ensemble_size: 3 # Number of dynamics models (reduced for memory)
-  dynamics_hidden_dim: 128 # Hidden dimension for dynamics
+  ensemble_size: 5 # Number of dynamics models (MBPO paper uses 5-7)
+  dynamics_hidden_dim: 256 # Hidden dimension for dynamics (increased)
   predict_reward: true # Whether to predict rewards
 
 # Early Stopping
 early_stopping:
-  enabled: false
+  enabled: true # Enable early stopping
   target_reward: 400.0 # Stop when mean reward reaches this
   window_size: 100 # Window for computing mean reward
-  patience: 50000 # Episodes without improvement before stop
+  patience: 100 # Episodes without improvement before stop (increased)
 
 # Logging & Checkpoints
 logging:
-  log_freq: 1000 # Steps between logging
-  save_freq: 100_000 # Steps between checkpoints
+  log_freq: 2500 # Steps between logging (increased to reduce noise)
+  save_freq: 50_000 # Steps between checkpoints (more frequent)
   checkpoint_dir: "checkpoints"
 
 # Wandb Configuration
@@ -77,19 +80,19 @@ wandb:
   enabled: true
   project: "MBPO-Breakout"
   entity: null # Set to your wandb username/team
-  tags: [ "mbpo", "breakout", "mbrl" ]
+  tags: [ "mbpo", "breakout", "mbrl", "cmps458" ]
 
 # Algorithm Selection (supports modularity)
 algorithm: "mbpo" # Options: "mbpo", "ppo", "sac", "ddqn"
 
 # Algorithm-specific configs
 ppo:
-  clip_range: 0.2
-  ent_coef: 0.1 # Increase entropy bonus to encourage exploration
-  vf_coef: 0.5
-  max_grad_norm: 0.5
-  n_epochs: 10
-  gae_lambda: 0.95
+  clip_range: 0.2 # PPO clipping range
+  ent_coef: 0.01 # Entropy coefficient (encourages exploration)
+  vf_coef: 0.5 # Value function coefficient
+  max_grad_norm: 0.5 # Max gradient norm for clipping
+  n_epochs: 4 # Number of epochs per update
+  gae_lambda: 0.95 # GAE lambda for advantage estimation
 
 sac:
   ent_coef: "auto"

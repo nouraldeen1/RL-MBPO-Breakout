@@ -1,0 +1,104 @@
+# =============================================================================
+# MBPO-Breakout Working Configuration
+# =============================================================================
+# Tested configuration that actually learns
+# =============================================================================
+
+# Random seed
+seed: 42
+
+# Environment Configuration
+env:
+  name: "BreakoutNoFrameskip-v4"
+  num_envs: 2
+  frame_stack: 4
+  frame_size: 84
+  noop_max: 30
+  frame_skip: 4
+  record_video: true
+  video_trigger_freq: 50
+  video_dir: "videos"
+
+# Debug settings
+debug:
+  action_debug_steps: 20000  # Monitor longer
+  action_log_freq: 2000
+
+# Training Configuration
+training:
+  total_timesteps: 500_000  # Longer test run
+  buffer_size: 50_000
+  batch_size: 128  # Smaller for stability
+  learning_starts: 5_000  # Start learning earlier
+  gamma: 0.99
+  tau: 0.005
+  grad_norm_skip_threshold: 5.0  # Skip bad updates
+
+  # Learning rates - MUCH lower for stability
+  policy_lr: 3e-5  # Very conservative
+  dynamics_lr: 1e-3
+
+  # MBPO specific
+  model_rollout_freq: 500  # Less frequent initially
+  model_rollout_length: 1
+  model_rollout_batch_size: 200
+  real_ratio: 0.5  # Use 50/50 real/model - maximum stability!
+
+  # Update frequencies
+  train_freq: 4
+  gradient_steps: 1
+  target_update_freq: 5_000
+
+# Model Configuration
+model:
+  cnn_channels: [ 32, 64, 64 ]
+  cnn_kernels: [ 8, 4, 3 ]
+  cnn_strides: [ 4, 2, 1 ]
+  fc_dim: 256
+
+  # Dynamics Ensemble
+  ensemble_size: 3
+  dynamics_hidden_dim: 128
+  predict_reward: true
+
+# Early Stopping
+early_stopping:
+  enabled: false
+  target_reward: 50.0
+  window_size: 10
+  patience: 1000
+
+# Logging & Checkpoints
+logging:
+  log_freq: 2500
+  save_freq: 50_000
+  checkpoint_dir: "checkpoints"
+
+# Wandb Configuration
+wandb:
+  enabled: false
+  project: "MBPO-Breakout-Working"
+  entity: null
+  tags: [ "mbpo", "breakout", "fixed" ]
+
+# Algorithm Selection
+algorithm: "mbpo"
+
+# PPO configs - CRITICAL for exploration
+ppo:
+  clip_range: 0.2
+  ent_coef: 0.5  # VERY HIGH entropy bonus (force exploration!)
+  vf_coef: 0.5
+  max_grad_norm: 0.3  # Strict gradient clipping
+  n_epochs: 4
+  gae_lambda: 0.95
+
+sac:
+  ent_coef: "auto"
+  target_entropy: "auto"
+  init_temperature: 0.2
+
+ddqn:
+  epsilon_start: 1.0
+  epsilon_end: 0.01
+  epsilon_decay: 0.995

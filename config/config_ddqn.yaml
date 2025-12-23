@@ -1,0 +1,78 @@
+# =============================================================================
+# DDQN-Breakout Configuration
+# =============================================================================
+# Double Deep Q-Network for BreakoutNoFrameskip-v4
+# Model-free baseline for comparison with MBPO
+# =============================================================================
+
+# Algorithm selection
+algorithm: "ddqn"
+
+# Random seed
+seed: 42
+
+# Environment Configuration
+env:
+  name: "BreakoutNoFrameskip-v4"
+  num_envs: 4
+  frame_stack: 4
+  frame_size: 84
+  noop_max: 30
+  frame_skip: 4
+  record_video: true
+  video_trigger_freq: 100
+  video_dir: "videos"
+
+# Debug settings
+debug:
+  action_debug_steps: 20000
+  action_log_freq: 2000
+
+# Training Configuration
+training:
+  total_timesteps: 2_000_000  # 2M steps for DDQN
+  buffer_size: 100_000
+  batch_size: 32
+  learning_starts: 50_000
+  gamma: 0.99
+  tau: 1.0  # Hard updates for DDQN
+  
+  # Learning rates
+  lr: 1e-4  # Standard for DQN on Atari
+  
+  # Exploration
+  epsilon_start: 1.0
+  epsilon_end: 0.01
+  epsilon_decay_steps: 1_000_000
+  
+  # Update frequencies
+  train_freq: 4
+  gradient_steps: 1
+  target_update_freq: 10_000  # Hard update every 10K steps
+  
+  # Gradient clipping
+  max_grad_norm: 10.0
+
+# Model Configuration
+model:
+  fc_dim: 512  # Fully connected layer size
+
+# Early Stopping
+early_stopping:
+  enabled: false  # Let it train fully
+  target_reward: 400.0
+  window_size: 100
+  patience: 50
+
+# Logging Configuration
+logging:
+  log_freq: 2_500
+  save_freq: 100_000
+  checkpoint_dir: "checkpoints"
+
+# Wandb Configuration
+wandb:
+  enabled: false  # Can enable later
+  project: "MBPO-Breakout"
+  entity: null
+  tags: ["ddqn", "breakout", "baseline"]

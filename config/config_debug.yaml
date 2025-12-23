@@ -1,89 +1,96 @@
 # =============================================================================
-# MBPO-Breakout Configuration
+# MBPO-Breakout Debug Configuration
 # =============================================================================
-# Model-Based Policy Optimization for BreakoutNoFrameskip-v4
-# CMPS458 - Reinforcement Learning Project
+# Quick testing configuration with reduced parameters
 # =============================================================================
+
+# Random seed
+seed: 42
 
 # Environment Configuration
 env:
   name: "BreakoutNoFrameskip-v4"
-  num_envs: 4 # Number of parallel environments
-  frame_stack: 4 # Number of stacked frames
-  frame_size: 84 # Observation size (84x84)
-  noop_max: 30 # Max no-op actions at reset
-  frame_skip: 4 # Frames to skip with max pooling
-  record_video: true # Enable video recording
-  video_trigger_freq: 50 # Record every N episodes
-  video_dir: "videos" # Video output directory
+  num_envs: 2 # Fewer parallel envs for debugging
+  frame_stack: 4
+  frame_size: 84
+  noop_max: 30
+  frame_skip: 4
+  record_video: true
+  video_trigger_freq: 10 # Record more frequently
+  video_dir: "videos"
 
-# Training Configuration
+# Debug settings
+debug:
+  action_debug_steps: 5000
+  action_log_freq: 1000
+
+# Training Configuration (reduced for quick testing)
 training:
-  total_timesteps: 10_000_000 # Total environment steps
-  buffer_size: 1_000_000 # Replay buffer capacity
-  batch_size: 256 # Batch size for updates
-  learning_starts: 0.0005 # Steps before training starts
-  gamma: 0.99 # Discount factor
-  tau: 0.005 # Soft update coefficient
+  total_timesteps: 50_000 # Short test run
+  buffer_size: 10_000 # Smaller buffer
+  batch_size: 64 # Smaller batch for speed
+  learning_starts: 2_000 # Start training quickly
+  gamma: 0.99
+  tau: 0.005
+  grad_norm_skip_threshold: 10.0
 
   # Learning rates
-  policy_lr: 3e-4 # Policy network learning rate
-  dynamics_lr: 1e-4 # Dynamics model learning rate
+  policy_lr: 1e-4  # Reduced to prevent gradient explosion
+  dynamics_lr: 1e-3
 
   # MBPO specific
-  model_rollout_freq: 250 # Steps between model rollouts
-  model_rollout_length: 1 # Horizon for model rollouts
-  model_rollout_batch_size: 100_000 # Batch size for model rollouts
-  real_ratio: 0.05 # Ratio of real vs model data
+  model_rollout_freq: 100 # More frequent for testing
+  model_rollout_length: 1
+  model_rollout_batch_size: 100 # Smaller for speed
+  real_ratio: 0.05
 
   # Update frequencies
-  train_freq: 4 # Environment steps between updates
-  gradient_steps: 1 # Gradient steps per update
-  target_update_freq: 10_000 # Steps between target network updates
+  train_freq: 4
+  gradient_steps: 1
+  target_update_freq: 5_000
 
 # Model Configuration
 model:
-  # Nature CNN Architecture
-  cnn_channels: [ 32, 64, 64 ] # Conv layer output channels
-  cnn_kernels: [ 8, 4, 3 ] # Conv layer kernel sizes
-  cnn_strides: [ 4, 2, 1 ] # Conv layer strides
-  fc_dim: 512 # Fully connected layer dimension
+  cnn_channels: [ 32, 64, 64 ]
+  cnn_kernels: [ 8, 4, 3 ]
+  cnn_strides: [ 4, 2, 1 ]
+  fc_dim: 256 # Smaller for debugging
 
-  # Dynamics Ensemble (MBPO Core)
-  ensemble_size: 5 # Number of dynamics models
-  dynamics_hidden_dim: 256 # Hidden dimension for dynamics
-  predict_reward: true # Whether to predict rewards
+  # Dynamics Ensemble
+  ensemble_size: 3 # Fewer models for debugging
+  dynamics_hidden_dim: 128 # Smaller for speed
+  predict_reward: true
 
 # Early Stopping
 early_stopping:
-  enabled: true
-  target_reward: 400.0 # Stop when mean reward reaches this
-  window_size: 100 # Window for computing mean reward
-  patience: 50 # Episodes without improvement before stop
+  enabled: false # Disabled for debug to see full behavior
+  target_reward: 50.0
+  window_size: 10
+  patience: 1000 # Very high patience if accidentally enabled
 
 # Logging & Checkpoints
 logging:
-  log_freq: 1000 # Steps between logging
-  save_freq: 100_000 # Steps between checkpoints
+  log_freq: 500 # More frequent logging
+  save_freq: 10_000 # More frequent saves
   checkpoint_dir: "checkpoints"
 
 # Wandb Configuration
 wandb:
-  enabled: true
-  project: "MBPO-Breakout"
-  entity: null # Set to your wandb username/team
-  tags: [ "mbpo", "breakout", "mbrl" ]
+  enabled: false # Disable for quick local testing
+  project: "MBPO-Breakout-Debug"
+  entity: null
+  tags: [ "mbpo", "breakout", "debug" ]
 
-# Algorithm Selection (supports modularity)
-algorithm: "mbpo" # Options: "mbpo", "ppo", "sac", "ddqn"
+# Algorithm Selection
+algorithm: "mbpo"
 
 # Algorithm-specific configs
 ppo:
   clip_range: 0.2
-  ent_coef: 0.01
+  ent_coef: 0.1  # Increased to prevent entropy collapse
   vf_coef: 0.5
   max_grad_norm: 0.5
-  n_epochs: 10
+  n_epochs: 4
   gae_lambda: 0.95
 
 sac:
@@ -93,6 +100,8 @@ sac:
 
 ddqn:
   epsilon_start: 1.0
+  epsilon_end: 0.01
+  epsilon_decay: 0.995
   epsilon_end: 0.01
   epsilon_decay: 0.995
   double_dqn: true

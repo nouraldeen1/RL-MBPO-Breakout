@@ -86,6 +86,9 @@ def record_video_episode(config, agent, global_step, episode_idx: int, video_dir
     total_reward = 0.0
     while not done:
         action, _ = agent.get_action(obs, deterministic=True)
+        # Handle action being an array
+        if isinstance(action, np.ndarray):
+            action = int(action.item() if action.size == 1 else action[0])
         obs, reward, terminated, truncated, info = env.step(action)
         # reward can be scalar or array-like from wrappers — handle both
         try:
@@ -100,8 +103,8 @@ def record_video_episode(config, agent, global_step, episode_idx: int, video_dir
     # Find the most recent video in the local folder and move it to the main video dir
     latest = find_latest_video(local_video_dir)
     if latest is not None:
-        os.makedirs(video_dir, exist_ok=True)
-        dst = os.path.join(video_dir, f"eval-episode-{episode_idx:06d}.mp4")
+        os.makedirs(local_video_dir, exist_ok=True)
+        dst = os.path.join(local_video_dir, f"eval-episode-{episode_idx:06d}.mp4")
         try:
             shutil.move(str(latest), dst)
             print(f"[Video] Saved episode video: {dst} (reward: {total_reward})")
@@ -239,6 +242,7 @@ def train(config: Dict, args: argparse.Namespace) -> float:
     model_rollout_freq = training_cfg.get("model_rollout_freq", 250)
     
     # Early stopping
+    early_stop_enabled = early_stop_cfg.get("enabled", True)
     early_stopper = EarlyStopping(
         target_reward=early_stop_cfg.get("target_reward", 400.0),
         window_size=early_stop_cfg.get("window_size", 100),
@@ -304,7 +308,7 @@ def train(config: Dict, args: argparse.Namespace) -> float:
                 })
                 
                 # Check early stopping
-                should_stop = early_stopper.update(episode_rewards[i])
+                should_stop = early_stop_enabled and early_stopper.update(episode_rewards[i])
                 
                 if use_wandb:
                     # Log per-episode metrics to Wandb without specifying `step`.
@@ -326,6 +330,7 @@ def train(config: Dict, args: argparse.Namespace) -> float:
                     
                     # Save final checkpoint
                     save_path = f"{checkpoint_dir}/final_{algorithm}.pt"
+                    os.makedirs(checkpoint_dir, exist_ok=True)
                     agent.save(save_path)
                     print(f"Final model saved to {save_path}")
                     
@@ -359,12 +364,14 @@ def train(config: Dict, args: argparse.Namespace) -> float:
             update_metrics = agent.update()
             metrics_logger.update(update_metrics)
             
-            # Debug: log first few updates to verify training is happening
-            if global_step <= learning_starts + 5000 and global_step % 100 == 0:
+            # Debug: log training metrics every 2500 steps to monitor entropy/gradients
+            if global_step % 2500 == 0:
+                dynamics_loss = update_metrics.get('dynamics/total_loss', 0)
                 print(f"[Training] Step {global_step}: "
                       f"policy_loss={update_metrics.get('policy/loss', 0):.4f}, "
                       f"grad_norm={update_metrics.get('policy/grad_norm', 0):.4f}, "
-                      f"entropy={update_metrics.get('policy/entropy', 0):.4f}")
+                      f"entropy={update_metrics.get('policy/entropy', 0):.4f}, "
+                      f"dynamics_loss={dynamics_loss:.4f}")
         
         # Model rollouts (for MBPO)
         if (algorithm == "mbpo" and 

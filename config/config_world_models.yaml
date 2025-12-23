@@ -1,0 +1,71 @@
+# =============================================================================
+# World Models Configuration
+# =============================================================================
+# World Models: V (VAE) + M (MDN-RNN) + C (Controller)
+# Model-based RL operating in learned latent space
+# =============================================================================
+
+# Algorithm selection
+algorithm: "world_models"
+
+# Random seed
+seed: 42
+
+# Environment Configuration
+env:
+  name: "BreakoutNoFrameskip-v4"
+  num_envs: 2 # Fewer envs for World Models
+  frame_stack: 4
+  frame_size: 84
+  noop_max: 30
+  frame_skip: 4
+  record_video: true
+  video_trigger_freq: 100
+  video_dir: "videos"
+
+# Debug settings
+debug:
+  action_debug_steps: 20000
+  action_log_freq: 2000
+
+# Training Configuration
+training:
+  total_timesteps: 1_000_000
+  buffer_size: 100_000
+  batch_size: 64
+  learning_starts: 10_000
+  gamma: 0.99
+
+  # Learning rates for each component
+  vae_lr: 0.001
+  mdnrnn_lr: 0.001
+  controller_lr: 0.001
+
+  # Update frequencies
+  train_freq: 4
+
+# Model Configuration
+model:
+  z_dim: 32 # Latent dimension
+  hidden_dim: 256 # RNN hidden size
+  n_gaussians: 5 # Number of Gaussians in mixture model
+
+# Early Stopping
+early_stopping:
+  enabled: false
+  target_reward: 400.0
+  window_size: 100
+  patience: 50
+
+# Logging Configuration
+logging:
+  log_freq: 2_500
+  save_freq: 100_000
+  checkpoint_dir: "checkpoints"
+
+# Wandb Configuration
+wandb:
+  enabled: false
+  project: "MBPO-Breakout"
+  entity: null
+  tags: ["world_models", "breakout", "model-based"]
