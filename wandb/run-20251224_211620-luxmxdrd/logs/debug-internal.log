@@ -1,0 +1,11 @@
+{"time":"2025-12-24T21:16:23.4938798+02:00","level":"INFO","msg":"stream: starting","core version":"0.23.0"}
+{"time":"2025-12-24T21:16:24.5721947+02:00","level":"INFO","msg":"stream: created new stream","id":"luxmxdrd"}
+{"time":"2025-12-24T21:16:24.5727333+02:00","level":"INFO","msg":"handler: started","stream_id":"luxmxdrd"}
+{"time":"2025-12-24T21:16:24.5884507+02:00","level":"INFO","msg":"stream: started","id":"luxmxdrd"}
+{"time":"2025-12-24T21:16:24.5884507+02:00","level":"INFO","msg":"sender: started","stream_id":"luxmxdrd"}
+{"time":"2025-12-24T21:16:24.5884507+02:00","level":"INFO","msg":"writer: started","stream_id":"luxmxdrd"}
+{"time":"2025-12-24T21:39:07.2466367+02:00","level":"INFO","msg":"stream: closing","id":"luxmxdrd"}
+{"time":"2025-12-24T21:39:08.6303333+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-12-24T21:39:09.6120588+02:00","level":"INFO","msg":"handler: closed","stream_id":"luxmxdrd"}
+{"time":"2025-12-24T21:39:09.6125042+02:00","level":"INFO","msg":"sender: closed","stream_id":"luxmxdrd"}
+{"time":"2025-12-24T21:39:09.6126152+02:00","level":"INFO","msg":"stream: closed","id":"luxmxdrd"}

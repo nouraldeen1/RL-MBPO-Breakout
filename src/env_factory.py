@@ -253,6 +253,18 @@ class MaxAndSkipEnv(gym.Wrapper):
         return self.env.reset(**kwargs)
 
 
+class ClipRewardEnv(gym.RewardWrapper):
+    """
+    Clip rewards to {-1, 0, +1} range.
+    
+    CRITICAL FOR BREAKOUT: Raw rewards are 1, 4, or 7 points per brick.
+    These varied magnitudes make training unstable. Clipping to [-1, +1]
+    gives consistent reward scale and faster convergence.
+    """
+    def reward(self, reward: float) -> float:
+        return np.sign(reward)
+
+
 class EpisodicLifeEnv(gym.Wrapper):
     """
     Make end-of-life == end-of-episode, but only reset on true game over.
@@ -463,6 +475,7 @@ def make_env(
         # Apply Nature DQN preprocessing stack
         env = NoopResetEnv(env, noop_max=noop_max)
         env = MaxAndSkipEnv(env, skip=frame_skip)
+        env = ClipRewardEnv(env)     # Clip rewards to [-1, +1]
         env = EpisodicLifeEnv(env)  # CRITICAL for Breakout
         env = FireResetEnv(env)      # Auto-start ball
         env = WarpFrame(env, width=84, height=84)  # Grayscale 84x84

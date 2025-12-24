@@ -1,0 +1,11 @@
+{"time":"2025-12-24T20:41:09.8502886+02:00","level":"INFO","msg":"stream: starting","core version":"0.23.0"}
+{"time":"2025-12-24T20:41:10.6465151+02:00","level":"INFO","msg":"stream: created new stream","id":"so3ctleb"}
+{"time":"2025-12-24T20:41:10.6465151+02:00","level":"INFO","msg":"handler: started","stream_id":"so3ctleb"}
+{"time":"2025-12-24T20:41:10.6472308+02:00","level":"INFO","msg":"stream: started","id":"so3ctleb"}
+{"time":"2025-12-24T20:41:10.6472308+02:00","level":"INFO","msg":"writer: started","stream_id":"so3ctleb"}
+{"time":"2025-12-24T20:41:10.6472308+02:00","level":"INFO","msg":"sender: started","stream_id":"so3ctleb"}
+{"time":"2025-12-24T20:52:25.0054638+02:00","level":"INFO","msg":"stream: closing","id":"so3ctleb"}
+{"time":"2025-12-24T20:52:27.7745974+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-12-24T20:52:28.5795282+02:00","level":"INFO","msg":"handler: closed","stream_id":"so3ctleb"}
+{"time":"2025-12-24T20:52:28.579829+02:00","level":"INFO","msg":"sender: closed","stream_id":"so3ctleb"}
+{"time":"2025-12-24T20:52:28.579829+02:00","level":"INFO","msg":"stream: closed","id":"so3ctleb"}

@@ -160,6 +160,8 @@ class PolicyNetwork(nn.Module):
         """
         features = self.encoder(obs)
         logits = self.policy_head(features)
+        # LOGIT CLIPPING: Prevent any single action logit from saturating
+        logits = torch.clamp(logits, min=-10.0, max=10.0)
         return logits
     
     def get_action(
@@ -754,6 +756,8 @@ class ActorCritic(nn.Module):
         """
         features = self.encoder(obs)
         logits = self.policy_head(features)
+        # LOGIT CLIPPING to keep policy uncertain enough to allow learning
+        logits = torch.clamp(logits, min=-10.0, max=10.0)
         value = self.value_head(features)
         return logits, value
     

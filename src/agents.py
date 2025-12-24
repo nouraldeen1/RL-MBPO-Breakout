@@ -22,11 +22,13 @@ from __future__ import annotations
 
 from typing import Dict, Optional, Tuple
 
+import os
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical
+import imageio
 
 from models import ActorCritic, DynamicsEnsemble, create_models
 from utils import Batch, MixedReplayBuffer, ModelReplayBuffer, ReplayBuffer
@@ -89,6 +91,9 @@ class MBPOAgent:
         self.ent_coef = config.get("ppo", {}).get("ent_coef", 0.01)
         self.vf_coef = config.get("ppo", {}).get("vf_coef", 0.5)
         self.max_grad_norm = config.get("ppo", {}).get("max_grad_norm", 0.5)
+        self.gae_lambda = config.get("ppo", {}).get("gae_lambda", 0.95)
+        # N-step returns for better credit assignment with sparse rewards
+        self.n_step_returns = training_cfg.get("n_step_returns", 5)
         # Safety threshold: skip applying extremely large updates
         self.grad_norm_skip_threshold = (
             training_cfg.get("grad_norm_skip_threshold", 10.0)
@@ -130,6 +135,10 @@ class MBPOAgent:
         # Training state
         self.total_steps = 0
         self.dynamics_trained = False
+        # For periodic dream monitoring (disabled by default)
+        self.update_count = 0
+        self.dream_monitor_freq = config.get("debug", {}).get("dream_monitor_freq", 0)
+        self.video_dir = config.get("env", {}).get("video_dir", "videos")
     
     def get_action(
         self,
@@ -232,58 +241,67 @@ class MBPOAgent:
     def generate_model_rollouts(self) -> int:
         """
         Generate synthetic rollouts using dynamics ensemble.
-        
-        Memory-optimized for 4GB GPUs.
-        
+        Store cumulative discounted rewards for each synthetic transition.
         Returns:
             Number of transitions generated
         """
         if not self.dynamics_trained or not self.real_buffer.is_ready(self.batch_size * 5):
             return 0
-        
+
         total_transitions = 0
         model_idx = 0  # Always use first model for consistency
-        
-        # Process in small chunks
         chunk_size = 32  # Very small to minimize memory
         num_chunks = max(1, self.model_rollout_batch_size // chunk_size)
-        
+        gamma = self.gamma
+        rollout_length = self.model_rollout_length
+
         for _ in range(num_chunks):
             batch = self.real_buffer.sample(chunk_size)
-            states = batch.states.clone()  # Clone to avoid reference issues
-            del batch  # Free the batch immediately
-            
+            start_states = batch.states.clone()  # (chunk_size, ...)
+            del batch
+
+            # For each trajectory, store the sequence
+            states = start_states.clone()
+            all_states = [states]
+            all_actions = []
+            all_rewards = []
+            all_next_states = []
+            all_dones = []
+
             with torch.no_grad():
-                for _ in range(self.model_rollout_length):
+                for t in range(rollout_length):
                     actions, _, _, _ = self.actor_critic.get_action_and_value(states)
-                    
                     next_states, rewards, _ = self.dynamics.predict_next_state(
                         states, actions, model_idx=model_idx, use_mean=True
                     )
-                    
                     dones = torch.zeros(chunk_size, device=self.device)
-                    
-                    # Convert to numpy and add to buffer
-                    s_np = states.cpu().numpy()
-                    a_np = actions.cpu().numpy()
-                    r_np = rewards.squeeze(-1).cpu().numpy()
-                    ns_np = next_states.cpu().numpy()
-                    d_np = dones.cpu().numpy()
-                    
-                    self.model_buffer.buffer.add_batch(s_np, a_np, r_np, ns_np, d_np)
-                    
-                    total_transitions += chunk_size
-                    
-                    # Update states for next rollout step
+                    all_states.append(next_states)
+                    all_actions.append(actions)
+                    all_rewards.append(rewards.squeeze(-1))
+                    all_next_states.append(next_states)
+                    all_dones.append(dones)
                     states = next_states.detach()
-                    
-                    # Clean up numpy arrays
-                    del s_np, a_np, r_np, ns_np, d_np
-            
-            # Clean up tensors after each chunk
-            del states, actions, next_states, rewards, dones
+
+            # Now compute cumulative discounted rewards for each starting point
+            # For each t in [0, rollout_length), the reward is sum_{k=0}^{rollout_length-t-1} gamma^k * r_{t+k}
+            all_states = all_states[:-1]  # exclude last next_state for alignment
+            for t in range(rollout_length):
+                s_np = all_states[t].cpu().numpy()
+                a_np = all_actions[t].cpu().numpy()
+                ns_np = all_next_states[t].cpu().numpy()
+                d_np = all_dones[t].cpu().numpy()
+                # Compute cumulative discounted reward for each trajectory in batch
+                cum_rewards = torch.zeros(chunk_size, device=self.device)
+                for k in range(rollout_length - t):
+                    cum_rewards += (gamma ** k) * all_rewards[t + k]
+                r_np = cum_rewards.cpu().numpy()
+                self.model_buffer.buffer.add_batch(s_np, a_np, r_np, ns_np, d_np)
+                total_transitions += chunk_size
+                del s_np, a_np, r_np, ns_np, d_np
+
+            del all_states, all_actions, all_rewards, all_next_states, all_dones, start_states
             torch.cuda.empty_cache()
-        
+
         return total_transitions
     
     def update_policy(self, n_updates: int = 1) -> Dict[str, float]:
@@ -312,14 +330,17 @@ class MBPOAgent:
                 batch.states, action=batch.actions
             )
             
-            # Compute returns and advantages (simple 1-step)
+            # Compute n-step return targets (approximate) to speed up credit assignment
+            # G_t = R_{t+1} + gamma^n * V(s_{t+n})  (approximation when only single-step samples available)
             with torch.no_grad():
                 _, _, _, next_values = self.actor_critic.get_action_and_value(
                     batch.next_states
                 )
-                targets = batch.rewards + self.gamma * next_values * (1 - batch.dones)
+                gamma_n = float(self.gamma) ** float(self.n_step_returns)
+                targets = batch.rewards + gamma_n * next_values * (1 - batch.dones)
+                advantages = targets - values
             
-            advantages = targets - values
+            # Normalize advantages for stability (CRITICAL)
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
             
             # Policy loss (simple policy gradient)
@@ -404,6 +425,20 @@ class MBPOAgent:
         metrics["buffer/real_size"] = len(self.real_buffer)
         metrics["buffer/model_size"] = len(self.model_buffer)
         
+        # Periodic dream monitoring: visualize imagination from a real state
+        self.update_count += 1
+        if self.dream_monitor_freq and (self.update_count % self.dream_monitor_freq == 0):
+            try:
+                if self.real_buffer.is_ready(1):
+                    sample = self.real_buffer.sample(1)
+                    state = sample.states[0].cpu().numpy()
+                    os.makedirs(self.video_dir, exist_ok=True)
+                    filename = os.path.join(self.video_dir, f"dream-{self.total_steps:09d}.gif")
+                    # Use model_rollout_length as imagination horizon
+                    self.visualize_imagination(state, filename=filename, horizon=int(self.model_rollout_length))
+            except Exception as e:
+                print(f"Dream monitor failed: {e}")
+
         return metrics
     
     def save(self, path: str) -> None:
@@ -425,6 +460,60 @@ class MBPOAgent:
         self.dynamics_optimizer.load_state_dict(checkpoint["dynamics_optimizer"])
         self.total_steps = checkpoint.get("total_steps", 0)
         self.dynamics_trained = True
+
+    def visualize_imagination(self, state, filename: Optional[str] = None, horizon: int = 60, model_idx: int = 0, fps: int = 10) -> None:
+        """
+        Save a GIF showing the dynamics model's imagined rollouts starting
+        from a real state. The `state` is expected to be a numpy array
+        with shape (C, H, W) and values in [0, 1].
+        """
+        try:
+            os.makedirs(self.video_dir, exist_ok=True)
+
+            # Prepare input: ensure float32 in [0,1]
+            if isinstance(state, torch.Tensor):
+                state_np = state.detach().cpu().numpy()
+            else:
+                state_np = np.array(state)
+
+            if state_np.max() > 1.1:
+                state_input = (state_np.astype(np.float32) / 255.0)
+            else:
+                state_input = state_np.astype(np.float32)
+
+            current_state = torch.from_numpy(state_input).float().to(self.device).unsqueeze(0)
+
+            frames = []
+            for i in range(horizon):
+                # Actor chooses action deterministically in imagination
+                actions, _info = self.get_action(current_state.cpu().numpy(), deterministic=True)
+                if isinstance(actions, np.ndarray):
+                    act = int(actions[0])
+                else:
+                    act = int(actions)
+
+                action_tensor = torch.tensor([act], dtype=torch.long, device=self.device)
+
+                with torch.no_grad():
+                    next_state_pred, rewards_pred, _ = self.dynamics.predict_next_state(
+                        current_state, action_tensor, model_idx=model_idx, use_mean=True
+                    )
+
+                # Take the last frame from the stacked channels and convert to RGB uint8
+                frame_gray = (next_state_pred[0, -1].detach().cpu().numpy() * 255.0).round().astype(np.uint8)
+                frame_rgb = np.stack([frame_gray, frame_gray, frame_gray], axis=-1)
+                frames.append(frame_rgb)
+
+                # Update current state for next imagination step
+                current_state = next_state_pred
+
+            if filename is None:
+                filename = os.path.join(self.video_dir, f"dream-{self.total_steps:09d}.gif")
+
+            imageio.mimsave(filename, frames, fps=fps)
+            print(f"Imagination saved to {filename}")
+        except Exception as e:
+            print(f"Failed to save imagination GIF: {e}")
 
 
 class DDQNAgent:

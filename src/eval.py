@@ -67,40 +67,71 @@ def evaluate_agent(
     """
     episode_rewards = []
     episode_lengths = []
-    
+    action_counts = {i: 0 for i in range(4)}  # For Breakout (actions 0-3)
+    entropy_list = []
+    logits_std_list = []
+
     if verbose:
         print(f"\nRunning {n_episodes} evaluation episodes...")
         print("-" * 50)
-    
+
     for episode in range(n_episodes):
         obs, info = env.reset()
         done = False
         total_reward = 0
         episode_length = 0
-        
+
         while not done:
             # Get action from agent
-            action, _ = agent.get_action(obs, deterministic=deterministic)
-            
+            action, info_action = agent.get_action(obs, deterministic=deterministic)
+            # Track action counts
+            if isinstance(action, np.ndarray):
+                act = int(action)
+            else:
+                act = action
+            if act in action_counts:
+                action_counts[act] += 1
+            # Track entropy/logits_std if available
+            if info_action is not None:
+                if 'entropy' in info_action:
+                    entropy_list.append(float(info_action['entropy']))
+                if 'logits_std' in info_action:
+                    logits_std_list.append(float(info_action['logits_std']))
+
             # Step environment
             obs, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
-            
+
             total_reward += reward
             episode_length += 1
-        
+
         episode_rewards.append(total_reward)
         episode_lengths.append(episode_length)
-        
+
         if verbose:
             print(f"Episode {episode + 1:>3}/{n_episodes} | "
                   f"Reward: {total_reward:>7.1f} | "
                   f"Length: {episode_length:>5}")
-    
+
+    # Action distribution summary
+    total_actions = sum(action_counts.values())
+    print("\nAction Distribution Across All Episodes:")
+    for act, count in action_counts.items():
+        pct = 100.0 * count / total_actions if total_actions > 0 else 0.0
+        print(f"  Action {act}: {count} ({pct:.1f}%)")
+
+    # Entropy/logits_std summary
+    if entropy_list:
+        avg_entropy = float(np.mean(entropy_list))
+        print(f"Average Policy Entropy: {avg_entropy:.4f}")
+    if logits_std_list:
+        avg_logits_std = float(np.mean(logits_std_list))
+        print(f"Average Policy Logits Std: {avg_logits_std:.4f}")
+
     # Get recorded videos
     video_dir = Path(env.video_folder) if hasattr(env, 'video_folder') else Path("videos/eval")
     video_files = get_video_files(str(video_dir), n_latest=n_episodes)
-    
+
     return episode_rewards, episode_lengths, video_files
 
 

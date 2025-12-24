@@ -55,3 +55,45 @@ C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2
 Step:     20,000 | Episodes:    620 | Mean Reward (100):    0.26 | Best:    0.29
 [Training] Step 20100: policy_loss=-0.0006, grad_norm=0.6862, entropy=1.3863
 [Training] Step 20200: policy_loss=0.0001, grad_norm=0.3081, entropy=1.3863
+[Training] Step 20300: policy_loss=0.0003, grad_norm=0.1470, entropy=1.3863
+[Training] Step 20400: policy_loss=0.0002, grad_norm=0.4290, entropy=1.3863
+[Training] Step 20500: policy_loss=0.0010, grad_norm=0.2524, entropy=1.3863
+[Training] Step 20600: policy_loss=0.0002, grad_norm=0.4380, entropy=1.3863
+Traceback (most recent call last):
+  File ".\src\main.py", line 511, in <module>
+    main()
+  File ".\src\main.py", line 507, in main
+    train(config, args)
+  File ".\src\main.py", line 359, in train
+    update_metrics = agent.update()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 381, in update
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 254, in generate_model_rollouts
+    del batch  # Free the batch immediately
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\models.py", line 782, in get_action_and_value
+    dist = Categorical(probs)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\distributions\categorical.py", line 71, in __init__
+    super().__init__(batch_shape, validate_args=validate_args)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\distributions\distribution.py", line 68, in __init__
+    valid = constraint.check(value)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\distributions\constraints.py", line 441, in check
+    return torch.all(value >= 0, dim=-1) & ((value.sum(-1) - 1).abs() < 1e-6)
+KeyboardInterrupt
+Traceback (most recent call last):
+  File ".\src\main.py", line 511, in <module>
+    main()
+  File ".\src\main.py", line 507, in main
+    train(config, args)
+  File ".\src\main.py", line 359, in train
+    update_metrics = agent.update()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 381, in update
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 254, in generate_model_rollouts
+    del batch  # Free the batch immediately
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\models.py", line 782, in get_action_and_value
+    dist = Categorical(probs)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\distributions\categorical.py", line 71, in __init__
+    super().__init__(batch_shape, validate_args=validate_args)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\distributions\distribution.py", line 68, in __init__
+    valid = constraint.check(value)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\distributions\constraints.py", line 441, in check
+    return torch.all(value >= 0, dim=-1) & ((value.sum(-1) - 1).abs() < 1e-6)
+KeyboardInterrupt

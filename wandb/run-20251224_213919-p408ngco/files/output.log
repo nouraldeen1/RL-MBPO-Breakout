@@ -1,0 +1,165 @@
+wandb: Detected [agents] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+
+Starting training for 1,000,000 timesteps...
+============================================================
+[ActionDebug] Step 0: {'action/0': 2, 'action/1': 0, 'action/2': 1, 'action/3': 1}
+Step:      1,000 | Episodes:     34 | Mean Reward (100):    0.09 | Best:    -inf
+[ActionDebug] Step 1000: {'action/0': 256, 'action/1': 231, 'action/2': 248, 'action/3': 269}
+Step:      2,000 | Episodes:     71 | Mean Reward (100):    0.13 | Best:    -inf
+[ActionDebug] Step 2000: {'action/0': 499, 'action/1': 451, 'action/2': 495, 'action/3': 559}
+Step:      3,000 | Episodes:     97 | Mean Reward (100):    0.16 | Best:    -inf
+[ActionDebug] Step 3000: {'action/0': 760, 'action/1': 681, 'action/2': 733, 'action/3': 830}
+C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\gymnasium\wrappers\rendering.py:283: UserWarning: [33mWARN: Overwriting existing videos at D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\videos\eval-000100 folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)[0m
+  logger.warn(
+[Video] Saved episode video: videos\eval-episode-000100.mp4 (reward: 0.0)
+Step:      4,000 | Episodes:    125 | Mean Reward (100):    0.23 | Best:    0.23
+[ActionDebug] Step 4000: {'action/0': 1030, 'action/1': 946, 'action/2': 961, 'action/3': 1067}
+Step:      5,000 | Episodes:    156 | Mean Reward (100):    0.24 | Best:    0.27
+[ActionDebug] Step 5000: {'action/0': 1270, 'action/1': 1211, 'action/2': 1218, 'action/3': 1305}
+Step:      6,000 | Episodes:    187 | Mean Reward (100):    0.28 | Best:    0.28
+[ActionDebug] Step 6000: {'action/0': 1521, 'action/1': 1448, 'action/2': 1477, 'action/3': 1558}
+C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\gymnasium\wrappers\rendering.py:283: UserWarning: [33mWARN: Overwriting existing videos at D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\videos\eval-000200 folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)[0m
+  logger.warn(
+[Video] Saved episode video: videos\eval-episode-000200.mp4 (reward: 0.0)
+Step:      7,000 | Episodes:    215 | Mean Reward (100):    0.22 | Best:    0.29
+[ActionDebug] Step 7000: {'action/0': 1761, 'action/1': 1712, 'action/2': 1722, 'action/3': 1809}
+Step:      8,000 | Episodes:    235 | Mean Reward (100):    0.28 | Best:    0.29
+[ActionDebug] Step 8000: {'action/0': 2026, 'action/1': 1945, 'action/2': 1965, 'action/3': 2068}
+Step:      9,000 | Episodes:    259 | Mean Reward (100):    0.36 | Best:    0.39
+[ActionDebug] Step 9000: {'action/0': 2279, 'action/1': 2191, 'action/2': 2215, 'action/3': 2319}
+Step:     10,000 | Episodes:    280 | Mean Reward (100):    0.46 | Best:    0.47
+C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\gymnasium\wrappers\rendering.py:283: UserWarning: [33mWARN: Overwriting existing videos at D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\videos\eval-000300 folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)[0m
+  logger.warn(
+[Video] Saved episode video: videos\eval-episode-000300.mp4 (reward: 0.0)
+Step:     11,000 | Episodes:    311 | Mean Reward (100):    0.47 | Best:    0.49
+Step:     12,000 | Episodes:    342 | Mean Reward (100):    0.35 | Best:    0.49
+Step:     13,000 | Episodes:    374 | Mean Reward (100):    0.23 | Best:    0.49
+C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\gymnasium\wrappers\rendering.py:283: UserWarning: [33mWARN: Overwriting existing videos at D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\videos\eval-000400 folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)[0m
+  logger.warn(
+[Video] Saved episode video: videos\eval-episode-000400.mp4 (reward: 0.0)
+Step:     14,000 | Episodes:    406 | Mean Reward (100):    0.20 | Best:    0.49
+Step:     15,000 | Episodes:    436 | Mean Reward (100):    0.18 | Best:    0.49
+Step:     16,000 | Episodes:    464 | Mean Reward (100):    0.24 | Best:    0.49
+Step:     17,000 | Episodes:    492 | Mean Reward (100):    0.28 | Best:    0.49
+C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\gymnasium\wrappers\rendering.py:283: UserWarning: [33mWARN: Overwriting existing videos at D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\videos\eval-000500 folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)[0m
+  logger.warn(
+[Video] Saved episode video: videos\eval-episode-000500.mp4 (reward: 0.0)
+Step:     18,000 | Episodes:    519 | Mean Reward (100):    0.30 | Best:    0.49
+Step:     19,000 | Episodes:    550 | Mean Reward (100):    0.27 | Best:    0.49
+[Training] Step 20000: policy_loss=-0.0000, grad_norm=0.1562, entropy=1.3863
+Step:     20,000 | Episodes:    576 | Mean Reward (100):    0.28 | Best:    0.49
+[Training] Step 20100: policy_loss=0.0012, grad_norm=0.4471, entropy=1.3863
+[Training] Step 20200: policy_loss=-0.0021, grad_norm=0.4610, entropy=1.3862
+[Training] Step 20300: policy_loss=0.0030, grad_norm=0.3426, entropy=1.3862
+[Training] Step 20400: policy_loss=0.0003, grad_norm=0.4538, entropy=1.3863
+[Training] Step 20500: policy_loss=-0.0000, grad_norm=0.3549, entropy=1.3863
+[Training] Step 20600: policy_loss=0.0001, grad_norm=0.1158, entropy=1.3863
+[Training] Step 20700: policy_loss=0.0008, grad_norm=0.1634, entropy=1.3863
+C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\gymnasium\wrappers\rendering.py:283: UserWarning: [33mWARN: Overwriting existing videos at D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\videos\eval-000600 folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)[0m
+  logger.warn(
+[Video] Saved episode video: videos\eval-episode-000600.mp4 (reward: 0.0)
+[Training] Step 20800: policy_loss=-0.0013, grad_norm=0.3429, entropy=1.3863
+[Training] Step 20900: policy_loss=0.0014, grad_norm=0.2458, entropy=1.3863
+[Training] Step 21000: policy_loss=-0.0000, grad_norm=0.2581, entropy=1.3863
+Step:     21,000 | Episodes:    610 | Mean Reward (100):    0.27 | Best:    0.49
+[Training] Step 21100: policy_loss=-0.0018, grad_norm=0.3798, entropy=1.3862
+[Training] Step 21200: policy_loss=-0.0032, grad_norm=0.2335, entropy=1.3859
+[Training] Step 21300: policy_loss=0.0008, grad_norm=0.1345, entropy=1.3859
+[Training] Step 21400: policy_loss=0.0036, grad_norm=0.2239, entropy=1.3859
+[Training] Step 21500: policy_loss=0.0049, grad_norm=0.4763, entropy=1.3851
+[Training] Step 21600: policy_loss=0.0083, grad_norm=0.4541, entropy=1.3850
+[Training] Step 21700: policy_loss=-0.0001, grad_norm=0.6043, entropy=1.3856
+[Training] Step 21800: policy_loss=-0.0005, grad_norm=0.3037, entropy=1.3861
+[Training] Step 21900: policy_loss=-0.0052, grad_norm=0.3448, entropy=1.3861
+[Training] Step 22000: policy_loss=0.0013, grad_norm=0.5509, entropy=1.3854
+Step:     22,000 | Episodes:    638 | Mean Reward (100):    0.29 | Best:    0.49
+[Training] Step 22100: policy_loss=0.0113, grad_norm=0.4493, entropy=1.3842
+[Training] Step 22200: policy_loss=0.0045, grad_norm=0.6385, entropy=1.3824
+[Training] Step 22300: policy_loss=0.0095, grad_norm=0.9561, entropy=1.3790
+[Training] Step 22400: policy_loss=0.0075, grad_norm=0.3610, entropy=1.3785
+[Training] Step 22500: policy_loss=-0.0266, grad_norm=1.5241, entropy=1.3709
+[Training] Step 22600: policy_loss=-0.0512, grad_norm=1.2487, entropy=1.3517
+[Training] Step 22700: policy_loss=0.0260, grad_norm=1.5145, entropy=1.3027
+[Training] Step 22800: policy_loss=-0.2978, grad_norm=5.3097, entropy=1.0431
+[Training] Step 22900: policy_loss=0.1759, grad_norm=6.8862, entropy=0.2674
+[Training] Step 23000: policy_loss=-0.2260, grad_norm=4.1525, entropy=0.0556
+Step:     23,000 | Episodes:    658 | Mean Reward (100):    0.36 | Best:    0.49
+[Training] Step 23100: policy_loss=0.3799, grad_norm=10.1561, entropy=0.0222
+[Training] Step 23200: policy_loss=0.6444, grad_norm=12.2344, entropy=0.0153
+[Training] Step 23300: policy_loss=-0.1608, grad_norm=7.1480, entropy=0.0087
+[Training] Step 23400: policy_loss=0.4566, grad_norm=16.9493, entropy=0.0038
+[Training] Step 23500: policy_loss=-1.3984, grad_norm=18.4600, entropy=0.0022
+[Training] Step 23600: policy_loss=-2.2816, grad_norm=28.0364, entropy=0.0011
+[Training] Step 23700: policy_loss=-1.5997, grad_norm=19.3309, entropy=0.0004
+[Training] Step 23800: policy_loss=0.4761, grad_norm=11.3278, entropy=0.0004
+[Training] Step 23900: policy_loss=0.7247, grad_norm=9.6193, entropy=0.0002
+[Training] Step 24000: policy_loss=-1.3875, grad_norm=18.2635, entropy=0.0001
+Step:     24,000 | Episodes:    685 | Mean Reward (100):    0.33 | Best:    0.49
+[Training] Step 24100: policy_loss=0.1621, grad_norm=12.6180, entropy=0.0001
+[Training] Step 24200: policy_loss=-0.6948, grad_norm=5.0924, entropy=0.0001
+[Training] Step 24300: policy_loss=-1.5430, grad_norm=15.0632, entropy=0.0000
+[Training] Step 24400: policy_loss=-2.1677, grad_norm=16.2855, entropy=0.0000
+[Training] Step 24500: policy_loss=-2.8888, grad_norm=11.3701, entropy=0.0000
+C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\gymnasium\wrappers\rendering.py:283: UserWarning: [33mWARN: Overwriting existing videos at D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\videos\eval-000700 folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)[0m
+  logger.warn(
+[Video] Saved episode video: videos\eval-episode-000700.mp4 (reward: 0.0)
+[Training] Step 24600: policy_loss=0.9071, grad_norm=10.3576, entropy=0.0000
+[Training] Step 24700: policy_loss=-0.6656, grad_norm=8.6754, entropy=0.0000
+[Training] Step 24800: policy_loss=-2.0835, grad_norm=8.3737, entropy=0.0000
+[Training] Step 24900: policy_loss=-2.0935, grad_norm=0.4919, entropy=0.0000
+[Training] Step 25000: policy_loss=-2.3762, grad_norm=2.3078, entropy=0.0000
+Step:     25,000 | Episodes:    716 | Mean Reward (100):    0.35 | Best:    0.49
+Step:     26,000 | Episodes:    749 | Mean Reward (100):    0.22 | Best:    0.49
+Step:     27,000 | Episodes:    783 | Mean Reward (100):    0.14 | Best:    0.49
+C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\gymnasium\wrappers\rendering.py:283: UserWarning: [33mWARN: Overwriting existing videos at D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\videos\eval-000800 folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)[0m
+  logger.warn(
+[Video] Saved episode video: videos\eval-episode-000800.mp4 (reward: 0.0)
+Step:     28,000 | Episodes:    806 | Mean Reward (100):    0.17 | Best:    0.49
+Step:     29,000 | Episodes:    822 | Mean Reward (100):    0.31 | Best:    0.49
+Step:     30,000 | Episodes:    843 | Mean Reward (100):    0.38 | Best:    0.49
+Step:     31,000 | Episodes:    870 | Mean Reward (100):    0.44 | Best:    0.49
+Step:     32,000 | Episodes:    891 | Mean Reward (100):    0.50 | Best:    0.50
+C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\gymnasium\wrappers\rendering.py:283: UserWarning: [33mWARN: Overwriting existing videos at D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\videos\eval-000900 folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)[0m
+  logger.warn(
+[Video] Saved episode video: videos\eval-episode-000900.mp4 (reward: 0.0)
+Step:     33,000 | Episodes:    920 | Mean Reward (100):    0.37 | Best:    0.51
+Step:     34,000 | Episodes:    946 | Mean Reward (100):    0.32 | Best:    0.51
+Step:     35,000 | Episodes:    970 | Mean Reward (100):    0.33 | Best:    0.51
+C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\gymnasium\wrappers\rendering.py:283: UserWarning: [33mWARN: Overwriting existing videos at D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\videos\eval-001000 folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)[0m
+  logger.warn(
+[Video] Saved episode video: videos\eval-episode-001000.mp4 (reward: 2.0)
+Step:     36,000 | Episodes:   1006 | Mean Reward (100):    0.21 | Best:    0.51
+Step:     37,000 | Episodes:   1034 | Mean Reward (100):    0.25 | Best:    0.51
+Step:     38,000 | Episodes:   1053 | Mean Reward (100):    0.28 | Best:    0.51
+Step:     39,000 | Episodes:   1075 | Mean Reward (100):    0.32 | Best:    0.51
+C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\gymnasium\wrappers\rendering.py:283: UserWarning: [33mWARN: Overwriting existing videos at D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\videos\eval-001100 folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)[0m
+  logger.warn(
+[Video] Saved episode video: videos\eval-episode-001100.mp4 (reward: 2.0)
+Step:     40,000 | Episodes:   1107 | Mean Reward (100):    0.34 | Best:    0.51
+Step:     41,000 | Episodes:   1139 | Mean Reward (100):    0.27 | Best:    0.51
+Traceback (most recent call last):
+  File ".\src\main.py", line 511, in <module>
+    main()
+  File ".\src\main.py", line 507, in main
+    train(config, args)
+  File ".\src\main.py", line 359, in train
+    update_metrics = agent.update()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 408, in update
+    n_generated = self.generate_model_rollouts()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 276, in generate_model_rollouts
+    s_np = states.cpu().numpy()
+KeyboardInterrupt
+Traceback (most recent call last):
+  File ".\src\main.py", line 511, in <module>
+    main()
+  File ".\src\main.py", line 507, in main
+    train(config, args)
+  File ".\src\main.py", line 359, in train
+    update_metrics = agent.update()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 408, in update
+    n_generated = self.generate_model_rollouts()
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 276, in generate_model_rollouts
+    s_np = states.cpu().numpy()
+KeyboardInterrupt

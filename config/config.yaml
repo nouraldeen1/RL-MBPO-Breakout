@@ -26,7 +26,7 @@ training:
   total_timesteps: 1_000_000 # Total environment steps
   buffer_size: 100_000 # Replay buffer capacity
   batch_size: 64 # Batch size for updates (small for memory)
-  learning_starts: 20_000 # Steps before training starts
+  learning_starts: 50_000 # Steps before training starts (increased for better model learning)
   # Steps before training starts
   gamma: 0.99 # Discount factor
   tau: 0.005 # Soft update coefficient
@@ -37,9 +37,10 @@ training:
 
   # MBPO specific
   model_rollout_freq: 1000 # Steps between model rollouts
-  model_rollout_length: 1 # Horizon for model rollouts (keep short)
+  model_rollout_length: 15 # Horizon for model rollouts (long enough to see ball hit bricks)
   model_rollout_batch_size: 256 # Batch size for model rollouts (small)
-  real_ratio: 0.8 # Ratio of real vs model data (favor real data to reduce model bias)
+  real_ratio: 0.8 # Use more real data early on to reduce model bias
+  n_step_returns: 5 # Use 5-step returns to propagate sparse rewards faster
 
   # Update frequencies
   train_freq: 4 # Environment steps between updates
@@ -64,7 +65,7 @@ early_stopping:
   enabled: false
   target_reward: 400.0 # Stop when mean reward reaches this
   window_size: 100 # Window for computing mean reward
-  patience: 50000 # Episodes without improvement before stop
+  patience: 5000 # Episodes without improvement before stop
 
 # Logging & Checkpoints
 logging:
@@ -85,7 +86,7 @@ algorithm: "mbpo" # Options: "mbpo", "ppo", "sac", "ddqn"
 # Algorithm-specific configs
 ppo:
   clip_range: 0.2
-  ent_coef: 0.1 # Increase entropy bonus to encourage exploration
+  ent_coef: 0.1 # Higher entropy to force exploration and prevent collapse
   vf_coef: 0.5
   max_grad_norm: 0.5
   n_epochs: 10
