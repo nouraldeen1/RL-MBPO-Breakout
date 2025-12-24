@@ -2,7 +2,7 @@
 MBPO Agent Implementation
 =========================
 
-Model-Based Policy Optimization agent for Breakout.
+Model-Based Policy Optimization agent for Space Invaders.
 
 MBPO Algorithm Overview:
 1. Collect real data from environment

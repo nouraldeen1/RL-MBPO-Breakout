@@ -1,0 +1,30 @@
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+.env/
+
+# Videos and media
+videos/
+*.mp4
+*.avi
+*.gif
+
+# Wandb runs
+wandb/
+
+# Checkpoints (large weights)
+checkpoints/
+
+# Logs
+*.log
+logs/
+
+# Editor/OS files
+.vscode/
+.DS_Store
+Thumbs.db

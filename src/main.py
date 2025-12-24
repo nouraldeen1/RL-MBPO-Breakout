@@ -1,7 +1,7 @@
 
 
 """
-Main Training Script for MBPO-Breakout
+Main Training Script for MBPO-SpaceInvaders
 ======================================
 
 This script provides the main training loop with:
@@ -72,7 +72,7 @@ def record_video_episode(config, agent, global_step, episode_idx: int, video_dir
             # If we cannot remove, fallback to appending a timestamp
             local_video_dir = os.path.join(video_dir, f"eval-{episode_idx:06d}-{int(time.time())}")
     env_fn = make_env(
-        env_id=config.get("env", {}).get("name", "BreakoutNoFrameskip-v4"),
+        env_id=config.get("env", {}).get("name", "SpaceInvadersNoFrameskip-v4"),
         seed=config.get("seed", 42),
         idx=0,
         capture_video=True,
@@ -112,7 +112,7 @@ def record_video_episode(config, agent, global_step, episode_idx: int, video_dir
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="MBPO Breakout Training")
+    parser = argparse.ArgumentParser(description="MBPO SpaceInvaders Training")
     parser.add_argument(
         "--config",
         type=str,
@@ -176,7 +176,7 @@ def train(config: Dict, args: argparse.Namespace) -> float:
     # Create environment
     print("\nCreating environment...")
     env = make_vec_env(
-        env_id=env_cfg.get("name", "BreakoutNoFrameskip-v4"),
+        env_id=env_cfg.get("name", "SpaceInvadersNoFrameskip-v4"),
         num_envs=env_cfg.get("num_envs", 4),
         seed=seed,
         capture_video=env_cfg.get("record_video", True),

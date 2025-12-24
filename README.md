@@ -1,6 +1,6 @@
-# MBPO-Breakout
+# MBPO-SpaceInvaders
 
-> **Model-Based Policy Optimization for BreakoutNoFrameskip-v4**  
+> **Model-Based Policy Optimization for SpaceInvadersNoFrameskip-v4**  
 > CMPS458 - Reinforcement Learning Project
 
 A modular, production-ready MBRL framework that implements MBPO with support for PPO, SAC, and DDQN benchmarks.
@@ -8,7 +8,7 @@ A modular, production-ready MBRL framework that implements MBPO with support for
 ## 📁 Project Structure
 
 ```
-RL-MBPO-Breakout/
+RL-MBPO-SpaceInvaders/
 ├── config/
 │   ├── config.yaml           # Main configuration file
 │   └── sweep_config.yaml     # Wandb Bayesian optimization sweep
@@ -32,7 +32,7 @@ RL-MBPO-Breakout/
 
 ```bash
 # Clone the repository
-cd RL-MBPO-Breakout
+cd RL-MBPO-SpaceInvaders
 
 # Create virtual environment (recommended)
 python -m venv venv
@@ -55,12 +55,13 @@ python env_factory.py
 ```
 
 Expected output:
+
 ```
 ============================================================
 Environment Verification
 ============================================================
 
-Environment: BreakoutNoFrameskip-v4
+Environment: SpaceInvadersNoFrameskip-v4
 Observation Shape: (4, 84, 84)
   Expected: (4, 84, 84) - 4 stacked grayscale frames
   Status: ✓ CORRECT
@@ -113,15 +114,19 @@ python src/eval.py --checkpoint checkpoints/best_mbpo.pt --wandb
 ## 🧠 Why This Environment Setup?
 
 ### Frame Stacking (4 frames)
+
 Without `FrameStack(4)`, your MBPO Dynamics Model cannot see where the ball is moving. It would just see a static image. Stacking frames allows the model to learn the physics of the bounce.
 
 ### EpisodicLifeEnv
-In Breakout, if the agent loses a life but the "episode" continues, the reward signal gets confusing. This wrapper tells the agent exactly when it failed, leading to higher quality gradients and faster convergence.
+
+In Space Invaders and similar Atari games, if the agent loses a life but the "episode" continues, the reward signal gets confusing. This wrapper tells the agent exactly when it failed, leading to higher quality gradients and faster convergence.
 
 ### Delta State Prediction
+
 The dynamics model predicts the **change** in pixels (`delta_state = next_state - state`) rather than the whole next image. This is easier for a CNN to learn - it only needs to learn "where the ball moved" instead of redrawing the entire screen.
 
 ### Nature DQN Preprocessing Stack
+
 ```
 NoopResetEnv(30)      → Initial state variety
 MaxAndSkipEnv(4)      → Reduce flickering, increase speed
@@ -135,6 +140,7 @@ FrameStack(4)         → Velocity sensing for dynamics model
 ## 🏗️ Architecture
 
 ### NatureCNN Encoder
+
 ```
 Conv2d(4, 32, 8x8, stride=4) + ReLU
 Conv2d(32, 64, 4x4, stride=2) + ReLU
@@ -144,6 +150,7 @@ Linear(3136, 512) + ReLU
 ```
 
 ### Dynamics Ensemble
+
 - **5 independent CNNs** (configurable)
 - Each predicts `delta_state` and `reward`
 - Ensemble provides:
@@ -152,6 +159,7 @@ Linear(3136, 512) + ReLU
   - Better exploration (epistemic uncertainty)
 
 ### MBPO Algorithm
+
 1. Collect real data from environment
 2. Train dynamics ensemble on real data
 3. Generate synthetic rollouts using learned models
@@ -164,28 +172,29 @@ Key parameters in `config/config.yaml`:
 ```yaml
 # Environment
 env:
-  num_envs: 4              # Parallel environments
-  frame_stack: 4           # Frames for velocity sensing
+  num_envs: 4 # Parallel environments
+  frame_stack: 4 # Frames for velocity sensing
 
 # MBPO
 training:
-  model_rollout_length: 1  # Horizon for model rollouts
-  real_ratio: 0.05         # 5% real, 95% synthetic data
+  model_rollout_length: 1 # Horizon for model rollouts
+  real_ratio: 0.05 # 5% real, 95% synthetic data
 
 # Model
 model:
-  ensemble_size: 5         # Number of dynamics models
-  fc_dim: 512              # Hidden layer dimension
+  ensemble_size: 5 # Number of dynamics models
+  fc_dim: 512 # Hidden layer dimension
 
 # Early Stopping
 early_stopping:
-  target_reward: 400       # Stop training at this reward
-  window_size: 100         # Episodes for mean calculation
+  target_reward: 400 # Stop training at this reward
+  window_size: 100 # Episodes for mean calculation
 ```
 
 ## 📊 Monitoring with Wandb
 
 The training script logs:
+
 - Episode rewards and lengths
 - Policy/dynamics losses
 - Buffer sizes (real vs model)
@@ -199,32 +208,35 @@ Access your runs at: [wandb.ai](https://wandb.ai)
 After generating the code:
 
 - [ ] **Verify Observation Shape**: Run `env_factory.py`, should output `(4, 84, 84)`
-- [ ] **Check Actions**: Breakout should have `Discrete(4)` - NOOP, FIRE, RIGHT, LEFT
+- [ ] **Check Actions**: Space Invaders should have `Discrete(6)` - NOOP, FIRE, RIGHT, LEFT, RIGHTFIRE, LEFTFIRE
 - [ ] **Wandb Test**: Run for 5 minutes to ensure charts and videos appear
 - [ ] **Model Shapes**: Run `models.py` to verify all tensor shapes
 
 ## 📈 Expected Performance
 
-| Metric | Target | Notes |
-|--------|--------|-------|
-| Mean Reward (100 eps) | 400+ | Early stopping threshold |
-| Training Time | ~10M steps | Varies by hardware |
-| Sample Efficiency | ~5x vs DQN | MBPO benefit |
+| Metric                | Target     | Notes                    |
+| --------------------- | ---------- | ------------------------ |
+| Mean Reward (100 eps) | 400+       | Early stopping threshold |
+| Training Time         | ~10M steps | Varies by hardware       |
+| Sample Efficiency     | ~5x vs DQN | MBPO benefit             |
 
 ## 🛠️ Troubleshooting
 
 ### CUDA Out of Memory
+
 - Reduce `batch_size` in config
 - Reduce `num_envs`
 - Reduce `model_rollout_batch_size`
 
 ### Import Errors
+
 ```bash
-cd RL-MBPO-Breakout
+cd RL-MBPO-SpaceInvaders
 export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
 ```
 
 ### Atari ROM Issues
+
 ```bash
 pip install gymnasium[accept-rom-license]
 # or manually download ROMs

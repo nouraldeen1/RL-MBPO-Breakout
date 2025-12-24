@@ -1,13 +1,13 @@
 # =============================================================================
-# MBPO-Breakout Configuration
+# MBPO-SpaceInvaders Configuration
 # =============================================================================
-# Model-Based Policy Optimization for BreakoutNoFrameskip-v4
+# Model-Based Policy Optimization for SpaceInvadersNoFrameskip-v4
 # CMPS458 - Reinforcement Learning Project
 # =============================================================================
 
 # Environment Configuration
 env:
-  name: "BreakoutNoFrameskip-v4"
+  name: "SpaceInvadersNoFrameskip-v4"
   num_envs: 4 # Number of parallel environments
   frame_stack: 4 # Number of stacked frames
   frame_size: 84 # Observation size (84x84)
@@ -20,9 +20,9 @@ env:
 # Training Configuration
 training:
   total_timesteps: 10_000_000 # Total environment steps
-  buffer_size: 1_000_000 # Replay buffer capacity
-  batch_size: 256 # Batch size for updates
-  learning_starts: 0.0005 # Steps before training starts
+  buffer_size: 50_000 # Replay buffer capacity
+  batch_size: 64 # Batch size for updates
+  learning_starts: 5000 # Steps before training starts
   gamma: 0.99 # Discount factor
   tau: 0.005 # Soft update coefficient
 
@@ -44,9 +44,9 @@ training:
 # Model Configuration
 model:
   # Nature CNN Architecture
-  cnn_channels: [ 32, 64, 64 ] # Conv layer output channels
-  cnn_kernels: [ 8, 4, 3 ] # Conv layer kernel sizes
-  cnn_strides: [ 4, 2, 1 ] # Conv layer strides
+  cnn_channels: [32, 64, 64] # Conv layer output channels
+  cnn_kernels: [8, 4, 3] # Conv layer kernel sizes
+  cnn_strides: [4, 2, 1] # Conv layer strides
   fc_dim: 512 # Fully connected layer dimension
 
   # Dynamics Ensemble (MBPO Core)
@@ -70,9 +70,9 @@ logging:
 # Wandb Configuration
 wandb:
   enabled: true
-  project: "MBPO-Breakout"
+  project: "MBPO-SpaceInvaders"
   entity: null # Set to your wandb username/team
-  tags: [ "mbpo", "breakout", "mbrl" ]
+  tags: ["mbpo", "spaceinvaders", "mbrl"]
 
 # Algorithm Selection (supports modularity)
 algorithm: "mbpo" # Options: "mbpo", "ppo", "sac", "ddqn"

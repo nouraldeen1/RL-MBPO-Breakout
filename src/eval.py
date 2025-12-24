@@ -1,5 +1,5 @@
 """
-Evaluation Script for MBPO-Breakout
+Evaluation Script for MBPO-SpaceInvaders
 ===================================
 
 This script provides evaluation utilities for trained agents:
@@ -157,7 +157,7 @@ def generate_report(
     
     report = f"""
 ================================================================================
-                        MBPO-Breakout Evaluation Report
+                        MBPO-SpaceInvaders Evaluation Report
 ================================================================================
 
 Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -194,7 +194,7 @@ Algorithm: {config.get('algorithm', 'mbpo').upper()}
 ================================================================================
                               Configuration
 ================================================================================
-  Environment:        {config.get('env', {}).get('name', 'BreakoutNoFrameskip-v4')}
+  Environment:        {config.get('env', {}).get('name', 'SpaceInvadersNoFrameskip-v4')}
   Frame Stack:        {config.get('env', {}).get('frame_stack', 4)}
   Ensemble Size:      {config.get('model', {}).get('ensemble_size', 5)}
   FC Dimension:       {config.get('model', {}).get('fc_dim', 512)}
@@ -228,7 +228,7 @@ def log_to_wandb(
     # Create wandb run
     wandb_cfg = config.get("wandb", {})
     wandb.init(
-        project=wandb_cfg.get("project", "MBPO-Breakout"),
+        project=wandb_cfg.get("project", "MBPO-SpaceInvaders"),
         entity=wandb_cfg.get("entity"),
         name=f"eval_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
         config=config,
@@ -289,7 +289,7 @@ def log_to_wandb(
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="MBPO Breakout Evaluation")
+    parser = argparse.ArgumentParser(description="MBPO SpaceInvaders Evaluation")
     parser.add_argument(
         "--checkpoint",
         type=str,
@@ -357,7 +357,7 @@ def main() -> None:
     print("\nCreating evaluation environment...")
     env_cfg = config.get("env", {})
     env = make_eval_env(
-        env_id=env_cfg.get("name", "BreakoutNoFrameskip-v4"),
+        env_id=env_cfg.get("name", "SpaceInvadersNoFrameskip-v4"),
         seed=args.seed,
         video_dir="videos/eval",
         record_every=1 if not args.no_video else 999999,

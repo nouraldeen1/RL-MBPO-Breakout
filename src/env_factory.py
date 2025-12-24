@@ -1,5 +1,5 @@
 """
-Environment Factory for MBPO-Breakout
+Environment Factory for MBPO-SpaceInvaders
 =====================================
 
 This module provides the environment construction utilities following the
@@ -257,7 +257,7 @@ class EpisodicLifeEnv(gym.Wrapper):
     """
     Make end-of-life == end-of-episode, but only reset on true game over.
     
-    CRITICAL FOR BREAKOUT: Without this wrapper, losing a life doesn't signal
+    CRITICAL FOR ATARI GAMES: Without this wrapper, losing a life doesn't signal
     a terminal state. This confuses the value function because the agent sees
     rewards continue after "bad" states. With this wrapper:
     - Each life is treated as an episode for learning
@@ -301,8 +301,8 @@ class FireResetEnv(gym.Wrapper):
     """
     Take action on reset for environments that require firing to start.
     
-    In Breakout, the agent must press FIRE to launch the ball. This wrapper
-    automatically handles this so the agent doesn't need to learn this trivial action.
+    In Space Invaders and similar games, the agent must press FIRE to start.
+    This wrapper automatically handles this so the agent doesn't need to learn this trivial action.
     """
     
     def __init__(self, env: gym.Env) -> None:
@@ -409,7 +409,7 @@ class ChannelFirstWrapper(gym.ObservationWrapper):
 # =============================================================================
 
 def make_env(
-    env_id: str = "BreakoutNoFrameskip-v4",
+    env_id: str = "SpaceInvadersNoFrameskip-v4",
     seed: int = 0,
     idx: int = 0,
     capture_video: bool = False,
@@ -437,7 +437,7 @@ def make_env(
         A callable that creates the wrapped environment
     
     Example:
-        >>> env_fn = make_env("BreakoutNoFrameskip-v4", seed=42)
+        >>> env_fn = make_env("SpaceInvadersNoFrameskip-v4", seed=42)
         >>> env = env_fn()
         >>> obs, info = env.reset()
         >>> print(obs.shape)  # (4, 84, 84)
@@ -457,13 +457,13 @@ def make_env(
                 env,
                 video_folder=video_dir,
                 episode_trigger=lambda episode_id: episode_id % video_trigger_freq == 0,
-                name_prefix=f"breakout-{idx}",
+                name_prefix=f"spaceinvaders-{idx}",
             )
         
         # Apply Nature DQN preprocessing stack
         env = NoopResetEnv(env, noop_max=noop_max)
         env = MaxAndSkipEnv(env, skip=frame_skip)
-        env = EpisodicLifeEnv(env)  # CRITICAL for Breakout
+        env = EpisodicLifeEnv(env)  # CRITICAL for Atari games
         env = FireResetEnv(env)      # Auto-start ball
         env = WarpFrame(env, width=84, height=84)  # Grayscale 84x84
         env = ScaledFloatFrame(env)  # Normalize to [0, 1]
@@ -481,7 +481,7 @@ def make_env(
 
 
 def make_vec_env(
-    env_id: str = "BreakoutNoFrameskip-v4",
+    env_id: str = "SpaceInvadersNoFrameskip-v4",
     num_envs: int = 4,
     seed: int = 0,
     capture_video: bool = True,
@@ -529,7 +529,7 @@ def make_vec_env(
 
 
 def make_eval_env(
-    env_id: str = "BreakoutNoFrameskip-v4",
+    env_id: str = "SpaceInvadersNoFrameskip-v4",
     seed: int = 0,
     video_dir: str = "videos/eval",
     record_every: int = 1,
@@ -567,7 +567,7 @@ def make_eval_env(
 # Verification Utilities
 # =============================================================================
 
-def verify_env_setup(env_id: str = "BreakoutNoFrameskip-v4") -> dict:
+def verify_env_setup(env_id: str = "SpaceInvadersNoFrameskip-v4") -> dict:
     """
     Verify environment setup and print diagnostic information.
     
