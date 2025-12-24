@@ -418,6 +418,7 @@ def make_env(
     noop_max: int = 30,
     frame_skip: int = 4,
     frame_stack: int = 4,
+    training: bool = True,
 ) -> Callable[[], gym.Env]:
     """
     Create a single Atari environment with Nature DQN preprocessing.
@@ -463,7 +464,8 @@ def make_env(
         # Apply Nature DQN preprocessing stack
         env = NoopResetEnv(env, noop_max=noop_max)
         env = MaxAndSkipEnv(env, skip=frame_skip)
-        env = EpisodicLifeEnv(env)  # CRITICAL for Breakout
+        if training:
+            env = EpisodicLifeEnv(env)
         env = FireResetEnv(env)      # Auto-start ball
         env = WarpFrame(env, width=84, height=84)  # Grayscale 84x84
         env = ScaledFloatFrame(env)  # Normalize to [0, 1]
@@ -558,6 +560,7 @@ def make_eval_env(
         capture_video=True,
         video_dir=video_dir,
         video_trigger_freq=record_every,
+        training=False,
         **kwargs
     )
     return env_fn()

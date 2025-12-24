@@ -84,7 +84,8 @@ def evaluate_model(
     episode_lengths = []
     
     for episode in range(num_episodes):
-        obs, _ = env.reset()
+        current_seed = seed + episode
+        obs, _ = env.reset(seed=current_seed)
         obs = torch.Tensor(obs).unsqueeze(0).to(device)
         
         done = False
@@ -146,7 +147,7 @@ def main():
                         help='Path to model checkpoint')
     parser.add_argument('--env-id', type=str, default='SpaceInvadersNoFrameskip-v4',
                         help='Environment ID')
-    parser.add_argument('--episodes', type=int, default=100,
+    parser.add_argument('--episodes', type=int, default=10,
                         help='Number of episodes to evaluate')
     parser.add_argument('--seed', type=int, default=42,
                         help='Random seed')
