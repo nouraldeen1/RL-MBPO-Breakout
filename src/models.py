@@ -183,3 +183,43 @@ class DynamicsEnsemble(nn.Module):
             pd, pr = m(s, a)
             loss += F.mse_loss(pd, target_delta) + F.mse_loss(pr.squeeze(-1), r)
         return loss, {}
+    
+class ActorCriticPPO(nn.Module):
+    """Actor-Critic model for PPO."""
+    
+    def __init__(self, num_actions, in_channels=4, fc_dim=512):
+        super().__init__()
+        self.encoder = NatureCNN(in_channels, fc_dim)
+        self.actor = nn.Linear(fc_dim, num_actions)
+        self.critic = nn.Linear(fc_dim, 1)
+    
+    def get_action_and_value(self, x, action=None, deterministic=False):
+        """
+        Get action and value from observation.
+        
+        Args:
+            x: Observation tensor (batch, channels, height, width)
+            action: Optional action tensor to evaluate
+            deterministic: If True, use argmax; if False, sample from distribution
+        
+        Returns:
+            action, log_prob, entropy, value
+        """
+        feats = self.encoder(x)
+        logits = self.actor(feats)
+        probs = Categorical(logits=logits)
+        
+        if action is None:
+            if deterministic:
+                # For deterministic, use argmax (not probs.mode())
+                action = logits.argmax(dim=-1)
+            else:
+                # For stochastic, sample from distribution
+                action = probs.sample()
+        
+        return action, probs.log_prob(action), probs.entropy(), self.critic(feats).squeeze(-1)
+    
+    def forward(self, x):
+        """Forward pass returning logits and values."""
+        feats = self.encoder(x)
+        return self.actor(feats), self.critic(feats)

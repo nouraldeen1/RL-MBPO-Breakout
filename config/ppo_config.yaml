@@ -1,0 +1,81 @@
+# PPO Configuration for SpaceInvadersNoFrameskip-v4
+# ===================================================
+
+# Environment settings
+environment:
+  env_id: "SpaceInvadersNoFrameskip-v4"
+  num_envs: 8  # Parallel environments for data collection
+  frame_stack: 4
+  noop_max: 30
+  frame_skip: 4
+  seed: 42
+
+# PPO algorithm parameters
+ppo:
+  # Learning rates
+  learning_rate: 2.5e-4
+  anneal_lr: true  # Linear learning rate annealing
+  
+  # Rollout parameters
+  num_steps: 128  # Steps per rollout per environment
+  num_iterations: 2000  # Total training iterations
+  
+  # Training parameters
+  num_minibatches: 4  # Number of minibatches per update
+  update_epochs: 4  # Number of epochs per PPO update
+  
+  # PPO-specific hyperparameters
+  gamma: 0.99  # Discount factor
+  gae_lambda: 0.95  # GAE lambda for advantage estimation
+  clip_coef: 0.1  # PPO clipping coefficient
+  clip_vloss: true  # Whether to clip value loss
+  ent_coef: 0.01  # Entropy coefficient
+  vf_coef: 0.5  # Value function coefficient
+  max_grad_norm: 0.5  # Gradient clipping
+  
+  # Target KL for early stopping (optional)
+  target_kl: null  # Set to null to disable, or e.g., 0.015
+
+# Model architecture
+model:
+  in_channels: 4  # Frame stack size
+  fc_dim: 512  # Fully connected layer dimension
+  
+# Training settings
+training:
+  total_timesteps: 2000000  # 2M timesteps
+  batch_size: null  # Computed as num_envs * num_steps
+  minibatch_size: null  # Computed as batch_size // num_minibatches
+  
+  # Evaluation
+  eval_frequency: 50  # Evaluate every N iterations
+  eval_episodes: 5  # Number of episodes for evaluation
+  
+  # Checkpointing
+  save_frequency: 100  # Save checkpoint every N iterations
+  checkpoint_dir: "checkpoints/ppo_spaceinvaders"
+  
+  # Video recording
+  record_video: true
+  video_dir: "videos/ppo_spaceinvaders"
+  video_frequency: 100  # Record every N iterations
+
+# Logging
+logging:
+  use_wandb: true
+  wandb_project: "ppo-spaceinvaders"
+  wandb_entity: null  # Set to your wandb username
+  run_name: "ppo_spaceinvaders_run"
+  log_frequency: 1  # Log every N iterations
+
+# Device settings
+device:
+  cuda: true  # Use CUDA if available
+  device_id: 0  # GPU device ID
+
+# Early stopping (optional)
+early_stopping:
+  enabled: false
+  target_reward: 1000.0
+  window_size: 100
+  patience: 200
