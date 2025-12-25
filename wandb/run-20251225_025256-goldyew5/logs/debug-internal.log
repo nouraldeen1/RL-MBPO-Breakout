@@ -1,0 +1,15 @@
+{"time":"2025-12-25T02:52:59.5278867+02:00","level":"INFO","msg":"stream: starting","core version":"0.23.0"}
+{"time":"2025-12-25T02:53:00.1122412+02:00","level":"INFO","msg":"stream: created new stream","id":"goldyew5"}
+{"time":"2025-12-25T02:53:00.1122412+02:00","level":"INFO","msg":"handler: started","stream_id":"goldyew5"}
+{"time":"2025-12-25T02:53:00.1128232+02:00","level":"INFO","msg":"stream: started","id":"goldyew5"}
+{"time":"2025-12-25T02:53:00.1133267+02:00","level":"INFO","msg":"writer: started","stream_id":"goldyew5"}
+{"time":"2025-12-25T02:53:00.113411+02:00","level":"INFO","msg":"sender: started","stream_id":"goldyew5"}
+{"time":"2025-12-25T02:53:15.8390788+02:00","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":6285}
+{"time":"2025-12-25T02:53:15.9893179+02:00","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":63}
+{"time":"2025-12-25T02:53:30.8166717+02:00","level":"INFO","msg":"flowcontrol: backed up, offloading to disk","recordNumber":13287}
+{"time":"2025-12-25T02:53:31.0167402+02:00","level":"INFO","msg":"flowcontrol: unblocked","totalOffloaded":90}
+{"time":"2025-12-25T02:53:35.0985805+02:00","level":"INFO","msg":"stream: closing","id":"goldyew5"}
+{"time":"2025-12-25T02:53:36.0973682+02:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-12-25T02:53:37.013227+02:00","level":"INFO","msg":"handler: closed","stream_id":"goldyew5"}
+{"time":"2025-12-25T02:53:37.013227+02:00","level":"INFO","msg":"sender: closed","stream_id":"goldyew5"}
+{"time":"2025-12-25T02:53:37.013227+02:00","level":"INFO","msg":"stream: closed","id":"goldyew5"}

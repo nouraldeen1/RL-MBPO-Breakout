@@ -67,7 +67,7 @@ def evaluate_agent(
     """
     episode_rewards = []
     episode_lengths = []
-    action_counts = {i: 0 for i in range(4)}  # For Breakout (actions 0-3)
+    action_counts = {i: 0 for i in range(getattr(env.action_space, 'n', 4))}  # For Breakout (actions 0-3)
     entropy_list = []
     logits_std_list = []
 
@@ -80,10 +80,15 @@ def evaluate_agent(
         done = False
         total_reward = 0
         episode_length = 0
+        # Persistent Dreamer hidden state: reset at episode start
+        hidden_state = None
 
         while not done:
-            # Get action from agent
-            action, info_action = agent.get_action(obs, deterministic=deterministic)
+            # Get action from agent, passing hidden_state
+            if hasattr(agent, "world_model"):
+                action, info_action, hidden_state = agent.get_action(obs, hidden_state, deterministic=deterministic)
+            else:
+                action, info_action = agent.get_action(obs, deterministic=deterministic)
             # Track action counts
             if isinstance(action, np.ndarray):
                 act = int(action)

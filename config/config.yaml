@@ -8,12 +8,12 @@
 # Environment Configuration
 env:
   name: "BreakoutNoFrameskip-v4"
-  num_envs: 4 # Number of parallel environments
+  num_envs: 1 # Number of parallel environments
   frame_stack: 4 # Number of stacked frames
   frame_size: 84 # Observation size (84x84)
   noop_max: 30 # Max no-op actions at reset
   frame_skip: 4 # Frames to skip with max pooling
-  record_video: true # Enable video recording
+  record_video: false # Enable video recording
   video_trigger_freq: 100 # Record every N episodes
   video_dir: "videos" # Video output directory
 
@@ -23,10 +23,10 @@ debug:
   action_log_freq: 1000
 
 training:
-  total_timesteps: 1_000_000 # Total environment steps
-  buffer_size: 100_000 # Replay buffer capacity
+  total_timesteps: 100_000 # Total environment steps
+  buffer_size: 10_000 # Replay buffer capacity
   batch_size: 64 # Batch size for updates (small for memory)
-  learning_starts: 50_000 # Steps before training starts (increased for better model learning)
+  learning_starts: 1_000 # Steps before training starts (increased for better model learning)
   # Steps before training starts
   gamma: 0.99 # Discount factor
   tau: 0.005 # Soft update coefficient
@@ -49,6 +49,10 @@ training:
 
 # Model Configuration
 model:
+  dreamer_chunk_length: 50 # Length of sequence chunks for Dreamer buffer (medium run)
+  latent_dim: 256 # Latent dimension for Dreamer world model (reduced for faster experiments)
+  kl_coeff: 1.0 # KL divergence coefficient for world model loss
+
   # Nature CNN Architecture
   cnn_channels: [ 32, 64, 64 ] # Conv layer output channels
   cnn_kernels: [ 8, 4, 3 ] # Conv layer kernel sizes
@@ -75,13 +79,13 @@ logging:
 
 # Wandb Configuration
 wandb:
-  enabled: true
+  enabled: false
   project: "MBPO-Breakout"
   entity: null # Set to your wandb username/team
   tags: [ "mbpo", "breakout", "mbrl" ]
 
 # Algorithm Selection (supports modularity)
-algorithm: "mbpo" # Options: "mbpo", "ppo", "sac", "ddqn"
+algorithm: "dreamer" # Options: "mbpo", "ppo", "sac", "ddqn"
 
 # Algorithm-specific configs
 ppo:

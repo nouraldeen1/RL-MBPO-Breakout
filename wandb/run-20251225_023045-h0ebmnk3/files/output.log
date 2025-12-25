@@ -1,0 +1,38 @@
+wandb: Detected [agents] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+
+Starting training for 1,000,000 timesteps...
+============================================================
+Traceback (most recent call last):
+  File ".\src\main.py", line 502, in <module>
+    main()
+  File ".\src\main.py", line 498, in main
+    train(config, args)
+  File ".\src\main.py", line 286, in train
+    latents = agent.imagine_latent_rollout(start_obs, rollout_length=15)
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 161, in imagine_latent_rollout
+    logits = self.actor_critic.policy_head(h)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\nn\modules\module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\nn\modules\module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\nn\modules\linear.py", line 117, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (4x1024 and 256x4)
+Traceback (most recent call last):
+  File ".\src\main.py", line 502, in <module>
+    main()
+  File ".\src\main.py", line 498, in main
+    train(config, args)
+  File ".\src\main.py", line 286, in train
+    latents = agent.imagine_latent_rollout(start_obs, rollout_length=15)
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\agents.py", line 161, in imagine_latent_rollout
+    logits = self.actor_critic.policy_head(h)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\nn\modules\module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\nn\modules\module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\nn\modules\linear.py", line 117, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (4x1024 and 256x4)

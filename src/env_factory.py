@@ -1,3 +1,26 @@
+
+from __future__ import annotations
+
+import gymnasium as gym
+from gymnasium import spaces
+from gymnasium.wrappers import TimeLimit
+
+class CenteredFloatFrame(gym.ObservationWrapper):
+    """
+    Normalize observations to [-0.5, 0.5] for Dreamer.
+    """
+    def __init__(self, env):
+        super().__init__(env)
+        old_shape = env.observation_space.shape
+        self.observation_space = spaces.Box(
+            low=-0.5,
+            high=0.5,
+            shape=old_shape,
+            dtype=np.float32
+        )
+    def observation(self, observation):
+        return observation.astype(np.float32) / 255.0 - 0.5
+
 """
 Environment Factory for MBPO-Breakout
 =====================================
@@ -11,8 +34,6 @@ standard "Nature DQN" preprocessing suite. This setup is critical for MBRL:
 
 Author: CMPS458 RL Project
 """
-
-from __future__ import annotations
 
 import os
 from typing import Callable, Optional, Sequence
@@ -430,6 +451,7 @@ def make_env(
     noop_max: int = 30,
     frame_skip: int = 4,
     frame_stack: int = 4,
+    dreamer_norm: bool = False,
 ) -> Callable[[], gym.Env]:
     """
     Create a single Atari environment with Nature DQN preprocessing.
@@ -479,11 +501,18 @@ def make_env(
         env = EpisodicLifeEnv(env)  # CRITICAL for Breakout
         env = FireResetEnv(env)      # Auto-start ball
         env = WarpFrame(env, width=84, height=84)  # Grayscale 84x84
-        env = ScaledFloatFrame(env)  # Normalize to [0, 1]
+        # For Dreamer, use CenteredFloatFrame for [-0.5, 0.5] normalization
+        if dreamer_norm:
+            env = CenteredFloatFrame(env)
+        else:
+            env = ScaledFloatFrame(env)  # Normalize to [0, 1]
         
         # Frame stacking - CRITICAL for velocity sensing
         # The dynamics model needs to see motion, not just static frames
         env = FrameStack(env, num_stack=frame_stack)
+        
+        # Add time limit to prevent infinite episodes
+        env = TimeLimit(env, max_episode_steps=1000)
         
         # Set seed for reproducibility
         env.action_space.seed(seed + idx)
@@ -595,7 +624,7 @@ def verify_env_setup(env_id: str = "BreakoutNoFrameskip-v4") -> dict:
     print("=" * 60)
     
     # Create single environment
-    env = make_env(env_id, seed=42, capture_video=False)()
+    env = make_env(env_id, seed=42, capture_video=False, dreamer_norm=False)()
     
     obs, info = env.reset()
     

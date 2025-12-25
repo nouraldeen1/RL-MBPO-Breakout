@@ -1,0 +1,22 @@
+wandb: Detected [agents] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+
+Starting training for 1,000,000 timesteps...
+============================================================
+Traceback (most recent call last):
+  File ".\src\main.py", line 502, in <module>
+    main()
+  File ".\src\main.py", line 498, in main
+    train(config, args)
+  File ".\src\main.py", line 288, in train
+    actions, _ = agent.get_action(obs, deterministic=False)
+ValueError: too many values to unpack (expected 2)
+Traceback (most recent call last):
+  File ".\src\main.py", line 502, in <module>
+    main()
+  File ".\src\main.py", line 498, in main
+    train(config, args)
+  File ".\src\main.py", line 288, in train
+    actions, _ = agent.get_action(obs, deterministic=False)
+ValueError: too many values to unpack (expected 2)

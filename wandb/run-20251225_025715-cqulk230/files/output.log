@@ -1,0 +1,35 @@
+wandb: Detected [agents] in use.
+wandb: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+wandb: For more information, check out the docs at: https://weave-docs.wandb.ai/
+
+Starting training for 1,000,000 timesteps...
+============================================================
+Step:      1,000 | Episodes:      0 | Mean Reward (100):    0.00 | Best:    0.00
+Traceback (most recent call last):
+  File ".\src\main.py", line 536, in <module>
+    main()
+  File ".\src\main.py", line 532, in main
+    train(config, args)
+  File ".\src\main.py", line 288, in train
+    actions, _ = agent.get_action(obs, deterministic=False)
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\dreamer_agent.py", line 275, in get_action
+    dist = Categorical(logits=logits)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\distributions\categorical.py", line 71, in __init__
+    super().__init__(batch_shape, validate_args=validate_args)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\distributions\distribution.py", line 69, in __init__
+    if not valid.all():
+KeyboardInterrupt
+Traceback (most recent call last):
+  File ".\src\main.py", line 536, in <module>
+    main()
+  File ".\src\main.py", line 532, in main
+    train(config, args)
+  File ".\src\main.py", line 288, in train
+    actions, _ = agent.get_action(obs, deterministic=False)
+  File "D:\as3b folder\CCE-C\term 5\rl\RL-last\RL-MBPO-Breakout\src\dreamer_agent.py", line 275, in get_action
+    dist = Categorical(logits=logits)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\distributions\categorical.py", line 71, in __init__
+    super().__init__(batch_shape, validate_args=validate_args)
+  File "C:\Users\nourh\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.8_qbz5n2kfra8p0\LocalCache\local-packages\Python38\site-packages\torch\distributions\distribution.py", line 69, in __init__
+    if not valid.all():
+KeyboardInterrupt

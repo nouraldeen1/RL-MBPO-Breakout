@@ -35,6 +35,141 @@ from utils import Batch, MixedReplayBuffer, ModelReplayBuffer, ReplayBuffer
 
 
 class MBPOAgent:
+    def update_latent_policy(self, batch_size=32):
+        """
+        Dreamer-style actor/critic update using sampled sequence chunks.
+        """
+        if not hasattr(self, "sequence_buffer") or len(self.sequence_buffer.buffer) == 0:
+            return {}
+        batch = self.sample_chunk_batch(batch_size)
+        states = batch["states"]  # (batch, chunk, C, H, W)
+        actions = batch["actions"]  # (batch, chunk)
+        rewards = batch["rewards"]  # (batch, chunk)
+        dones = batch["dones"]  # (batch, chunk)
+        # Flatten batch and chunk for world model
+        B, T = states.shape[0], states.shape[1]
+        states_flat = states.view(B * T, *states.shape[2:])
+        actions_flat = actions.view(B * T)
+        # Dreamer: get initial hidden state
+        hidden = torch.zeros(B, self.latent_dim, device=self.device)
+        # Roll through sequence
+        policy_loss = 0.0
+        value_loss = 0.0
+        entropy_loss = 0.0
+        for t in range(T):
+            obs_t = states[:, t]
+            act_t = actions[:, t]
+            rew_t = rewards[:, t]
+            done_t = dones[:, t]
+            # One-hot actions
+            act_onehot = F.one_hot(act_t, num_classes=self.num_actions).float()
+            h = self.world_model.encoder(obs_t)
+            hidden = self.world_model.rssm(h, act_onehot, hidden)
+            # Project latent to policy feature space
+            feat = self.latent_proj(hidden)
+            logits = self.actor_critic.policy_head(feat)
+            dist = torch.distributions.Categorical(logits=logits)
+            action_sample = dist.sample()
+            log_prob = dist.log_prob(action_sample)
+            entropy = dist.entropy()
+            # Critic value (dummy, needs proper value head)
+            value = torch.zeros_like(rew_t)
+            # Policy loss (REINFORCE with baseline)
+            advantage = rew_t - value
+            policy_loss += -(log_prob * advantage.detach()).mean()
+            value_loss += F.mse_loss(value, rew_t)
+            entropy_loss += -entropy.mean()
+        policy_loss /= T
+        value_loss /= T
+        entropy_loss /= T
+        loss = policy_loss + self.vf_coef * value_loss + self.ent_coef * entropy_loss
+        self.policy_optimizer.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
+        self.policy_optimizer.step()
+        return {
+            "latent_policy_loss": policy_loss.item(),
+            "latent_value_loss": value_loss.item(),
+            "latent_entropy_loss": entropy_loss.item(),
+            "latent_total_loss": loss.item(),
+        }
+
+    def init_sequence_buffer(self):
+        from utils import SequenceReplayBuffer
+        model_cfg = self.config.get("model", {})
+        chunk_length = model_cfg.get("dreamer_chunk_length", 50)
+        buffer_size = self.config.get("training", {}).get("buffer_size", 10000)
+        self.sequence_buffer = SequenceReplayBuffer(buffer_size, chunk_length, self.obs_shape, self.device)
+
+    def store_chunk(self, states, actions, rewards, next_states, dones):
+        if hasattr(self, "sequence_buffer"):
+            self.sequence_buffer.add_chunk(states, actions, rewards, next_states, dones)
+
+    def sample_chunk_batch(self, batch_size):
+        if hasattr(self, "sequence_buffer"):
+            return self.sequence_buffer.sample(batch_size)
+        return None
+
+    def init_world_model(self):
+        from models import WorldModel
+        model_cfg = self.config.get("model", {})
+        self.latent_dim = model_cfg.get("latent_dim", 1024)
+        self.kl_coeff = model_cfg.get("kl_coeff", 1.0)
+        self.world_model = WorldModel(
+            in_channels=self.obs_shape[0],
+            latent_dim=self.latent_dim,
+            action_dim=self.num_actions
+        ).to(self.device)
+        # Projection from world-model latent to policy feature dim
+        fc_dim = model_cfg.get("fc_dim", 512)
+        self.latent_proj = nn.Linear(self.latent_dim, fc_dim).to(self.device)
+        self.world_optimizer = torch.optim.Adam(self.world_model.parameters(), lr=1e-4)
+
+        def train_world_model(self, batch):
+            # obs: (batch, C, H, W), actions: (batch,)
+            obs = batch.states.float() / 255.0 - 0.5  # [-0.5, 0.5] normalization
+            actions = F.one_hot(batch.actions, num_classes=self.num_actions).float()
+            prev_hidden = torch.zeros(obs.size(0), self.latent_dim, device=self.device)
+            h, recon, reward_pred, done_pred = self.world_model(obs, actions, prev_hidden)
+            # Reconstruction loss
+            pixel_loss = F.mse_loss(recon, obs)
+            reward_loss = F.mse_loss(reward_pred.squeeze(-1), batch.rewards)
+            # KL loss (dummy prior/posterior for now)
+            prior_mean = torch.zeros_like(h)
+            prior_logvar = torch.zeros_like(h)
+            post_mean = h
+            post_logvar = torch.zeros_like(h)
+            from utils import kl_divergence
+            kl_loss = kl_divergence(prior_mean, prior_logvar, post_mean, post_logvar)
+            loss = pixel_loss + reward_loss + self.kl_coeff * kl_loss
+            self.world_optimizer.zero_grad()
+            loss.backward()
+            self.world_optimizer.step()
+            return {
+                "pixel_loss": pixel_loss.item(),
+                "reward_loss": reward_loss.item(),
+                "kl_loss": kl_loss.item(),
+                "wm_total_loss": loss.item(),
+            }
+
+        def imagine_latent_rollout(self, start_obs, rollout_length=15):
+            # Dreamer-style latent imagination
+            obs = torch.from_numpy(start_obs).float().to(self.device) / 255.0 - 0.5
+            batch_size = obs.shape[0]
+            prev_hidden = torch.zeros(batch_size, self.latent_dim, device=self.device)
+            actions = torch.zeros(batch_size, self.num_actions, device=self.device)
+            latents = []
+            for t in range(rollout_length):
+                h, _, _, _ = self.world_model(obs, actions, prev_hidden)
+                latents.append(h)
+                # Policy acts in latent space
+                feat = self.latent_proj(h)
+                logits = self.actor_critic.policy_head(feat)
+                actions = F.one_hot(torch.argmax(logits, dim=-1), num_classes=self.num_actions).float()
+                prev_hidden = h
+            return latents
+        # Bind nested helper as an instance method so it can be called externally
+        self.imagine_latent_rollout = imagine_latent_rollout.__get__(self)
     """
     MBPO Agent with dynamics ensemble and actor-critic policy.
     
@@ -143,50 +278,78 @@ class MBPOAgent:
     def get_action(
         self,
         state: np.ndarray,
+        hidden_state: Optional[torch.Tensor] = None,
         deterministic: bool = False,
-    ) -> Tuple[np.ndarray, Dict]:
+    ) -> Tuple[np.ndarray, Dict, Optional[torch.Tensor]]:
         """
         Select actions for a batch of states.
         
         Args:
             state: Observation array (batch_size, C, H, W) or single (C, H, W)
+            hidden_state: Dreamer persistent hidden state (None or tensor)
             deterministic: Whether to use deterministic actions
-        
+
         Returns:
             actions: Selected actions array (batch_size,) or single int
             info: Dictionary with batched log_probs and values
+            hidden_state: Updated hidden state (Dreamer)
         """
         with torch.no_grad():
-            # Handle single state case for compatibility
             is_single = len(state.shape) == 3
             if is_single:
                 state = np.expand_dims(state, 0)
 
-            state_tensor = torch.from_numpy(state).float().to(self.device)
-            
-            logits, _ = self.actor_critic.forward(state_tensor)
-            actions, log_probs, entropies, values = self.actor_critic.get_action_and_value(
-                state_tensor, deterministic=deterministic
-            )
-        
-        actions_np = actions.cpu().numpy()
-        
-        # If input was single, return single action and scalar info
-        if is_single:
-            return actions_np[0], {
-                "log_prob": log_probs[0].cpu().item(),
-                "value": values[0].cpu().item(),
-                "entropy": entropies[0].cpu().item(),
-                "logits_std": logits[0].std().cpu().item(),
-            }
-
-        # Otherwise, return batch
-        return actions_np, {
-            "log_prob": log_probs.cpu().numpy(),
-            "value": values.cpu().numpy(),
-            "entropy": entropies.cpu().numpy(),
-            "logits_std": logits.std(dim=-1).mean().cpu().item(),
-        }
+            # Dreamer: use world model and hidden state
+            if hasattr(self, "world_model") and self.world_model is not None:
+                # Normalize obs for Dreamer
+                state_tensor = torch.from_numpy(state).float().to(self.device) / 255.0 - 0.5
+                batch_size = state_tensor.shape[0]
+                if hidden_state is None:
+                    hidden_state = torch.zeros(batch_size, self.latent_dim, device=self.device)
+                # Dummy previous action (zeros)
+                prev_action = torch.zeros(batch_size, self.num_actions, device=self.device)
+                h, _, _, _ = self.world_model(state_tensor, prev_action, hidden_state)
+                feat = self.latent_proj(h)
+                logits = self.actor_critic.policy_head(feat)
+                actions = torch.argmax(logits, dim=-1)
+                log_probs = torch.log_softmax(logits, dim=-1).gather(1, actions.unsqueeze(-1)).squeeze(-1)
+                entropies = -(torch.softmax(logits, dim=-1) * torch.log_softmax(logits, dim=-1)).sum(dim=-1)
+                values = torch.zeros_like(actions, dtype=torch.float32)
+                actions_np = actions.cpu().numpy()
+                next_hidden_state = h
+                info = {
+                    "log_prob": log_probs.cpu().numpy(),
+                    "value": values.cpu().numpy(),
+                    "entropy": entropies.cpu().numpy(),
+                    "logits_std": logits.std(dim=-1).mean().cpu().item(),
+                }
+                if is_single:
+                    if hidden_state is not None:
+                        return actions_np[0], info, next_hidden_state[0]
+                    return actions_np[0], info
+                if hidden_state is not None:
+                    return actions_np, info, next_hidden_state
+                return actions_np, info
+            else:
+                state_tensor = torch.from_numpy(state).float().to(self.device)
+                logits, _ = self.actor_critic.forward(state_tensor)
+                actions, log_probs, entropies, values = self.actor_critic.get_action_and_value(
+                    state_tensor, deterministic=deterministic
+                )
+                actions_np = actions.cpu().numpy()
+                info = {
+                    "log_prob": log_probs.cpu().numpy(),
+                    "value": values.cpu().numpy(),
+                    "entropy": entropies.cpu().numpy(),
+                    "logits_std": logits.std(dim=-1).mean().cpu().item(),
+                }
+                if is_single:
+                    if hidden_state is not None:
+                        return actions_np[0], info, None
+                    return actions_np[0], info
+                if hidden_state is not None:
+                    return actions_np, info, None
+                return actions_np, info
     
     def store_transition(
         self,
@@ -669,5 +832,12 @@ def create_agent(algorithm: str, obs_shape: Tuple, num_actions: int, config: Dic
         return MBPOAgent(obs_shape, num_actions, config, device)
     elif algorithm == "ddqn":
         return DDQNAgent(obs_shape, num_actions, config, device)
+    elif algorithm == "dreamer":
+        # Dreamer implementation lives in src/dreamer_agent.py
+        try:
+            from dreamer_agent import DreamerAgent
+        except Exception:
+            from .dreamer_agent import DreamerAgent
+        return DreamerAgent(obs_shape, num_actions, config, device)
     else:
         raise ValueError(f"Unknown algorithm: {algorithm}")

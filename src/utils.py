@@ -1,3 +1,82 @@
+# =============================================================================
+# Dreamer Sequence Replay Buffer
+# =============================================================================
+class SequenceReplayBuffer:
+    """
+    Replay buffer for Dreamer: stores sequences/chunks of transitions.
+    Each entry is a dict with keys: states, actions, rewards, next_states, dones
+    """
+    def __init__(self, capacity, chunk_length, obs_shape, device="cpu"):
+        self.capacity = capacity
+        self.chunk_length = chunk_length
+        self.obs_shape = obs_shape
+        self.device = device
+        self.buffer = []
+        self.ptr = 0
+
+    def add_chunk(self, states, actions, rewards, next_states, dones):
+        """Add a sequence chunk to the buffer."""
+        if len(self.buffer) < self.capacity:
+            self.buffer.append(None)
+        self.buffer[self.ptr] = {
+            "states": np.array(states),
+            "actions": np.array(actions),
+            "rewards": np.array(rewards),
+            "next_states": np.array(next_states),
+            "dones": np.array(dones),
+        }
+        self.ptr = (self.ptr + 1) % self.capacity
+
+    def sample(self, batch_size):
+        """Sample batch_size chunks."""
+        if len(self.buffer) == 0:
+            raise ValueError("Buffer is empty")
+        idxs = np.random.choice(len(self.buffer), min(batch_size, len(self.buffer)))
+        batch = []
+        for i in idxs:
+            b = self.buffer[i]
+            batch.append({
+                "states": torch.from_numpy(b["states"]).float().to(self.device) / 255.0 - 0.5,
+                "actions": torch.from_numpy(b["actions"]).long().to(self.device),
+                "rewards": torch.from_numpy(b["rewards"]).float().to(self.device),
+                "next_states": torch.from_numpy(b["next_states"]).float().to(self.device) / 255.0 - 0.5,
+                "dones": torch.from_numpy(b["dones"]).float().to(self.device),
+            })
+        return batch
+
+    def is_ready(self, batch_size):
+        """Check if buffer has enough samples for batch."""
+        return len(self.buffer) >= batch_size
+# =============================================================================
+# Dreamer Loss Utilities
+# =============================================================================
+
+def kl_divergence(prior_mean, prior_logvar, post_mean, post_logvar):
+    """
+    Compute KL divergence between two Gaussians (prior, posterior).
+    """
+    # KL(N(mu1, var1) || N(mu2, var2))
+    kl = 0.5 * (
+        post_logvar - prior_logvar
+        + (torch.exp(prior_logvar) + (prior_mean - post_mean) ** 2) / torch.exp(post_logvar)
+        - 1
+    )
+    return kl.sum(dim=-1).mean()
+
+def gumbel_softmax_sample(logits, tau=1.0, hard=False):
+    """
+    Sample from the Gumbel-Softmax distribution (for discrete latents).
+    """
+    gumbels = -torch.empty_like(logits).exponential_().log()  # Sample gumbel noise
+    y = (logits + gumbels) / tau
+    y_soft = torch.softmax(y, dim=-1)
+    if hard:
+        # Straight-through: one-hot
+        index = y_soft.max(dim=-1, keepdim=True)[1]
+        y_hard = torch.zeros_like(logits).scatter_(-1, index, 1.0)
+        return (y_hard - y_soft).detach() + y_soft
+    return y_soft
+
 """
 Utility Classes for MBPO-Breakout
 =================================
@@ -10,8 +89,6 @@ This module provides utility classes and functions:
 
 Author: CMPS458 RL Project
 """
-
-from __future__ import annotations
 
 import os
 import random

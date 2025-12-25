@@ -200,6 +200,10 @@ def train(config: Dict, args: argparse.Namespace) -> float:
     algorithm = config.get("algorithm", "mbpo")
     print(f"\nCreating {algorithm.upper()} agent...")
     agent = create_agent(algorithm, obs_shape, num_actions, config, device)
+    # Dreamer world model init
+    if config.get("model", {}).get("latent_dim", None):
+        agent.config = config
+        agent.init_world_model()
     
     # Initialize wandb
     use_wandb = config.get("wandb", {}).get("enabled", True) and not args.no_wandb
@@ -230,20 +234,24 @@ def train(config: Dict, args: argparse.Namespace) -> float:
         except Exception:
             return default
 
-    total_timesteps = _parse_int(training_cfg.get("total_timesteps", 10_000_000), 10_000_000)
+    total_timesteps = _parse_int(training_cfg.get("total_timesteps", 10_000), 10_000)
     learning_starts = _parse_int(training_cfg.get("learning_starts", 50_000), 50_000)
     train_freq = training_cfg.get("train_freq", 4)
-    log_freq = config.get("logging", {}).get("log_freq", 1000)
+    log_freq = config.get("logging", {}).get("log_freq", 100)
     save_freq = config.get("logging", {}).get("save_freq", 100_000)
     checkpoint_dir = config.get("logging", {}).get("checkpoint_dir", "checkpoints")
     model_rollout_freq = training_cfg.get("model_rollout_freq", 250)
     
     # Early stopping
-    early_stopper = EarlyStopping(
-        target_reward=early_stop_cfg.get("target_reward", 400.0),
-        window_size=early_stop_cfg.get("window_size", 100),
-        patience=early_stop_cfg.get("patience", 50),
-    )
+    early_stop_enabled = early_stop_cfg.get("enabled", False)
+    if early_stop_enabled:
+        early_stopper = EarlyStopping(
+            target_reward=early_stop_cfg.get("target_reward", 400.0),
+            window_size=early_stop_cfg.get("window_size", 100),
+            patience=early_stop_cfg.get("patience", 50),
+        )
+    else:
+        early_stopper = None
     
     # Metrics logger
     metrics_logger = MetricsLogger()
@@ -269,80 +277,98 @@ def train(config: Dict, args: argparse.Namespace) -> float:
     action_debug_steps = config.get("debug", {}).get("action_debug_steps", 10_000)
     action_log_freq = config.get("debug", {}).get("action_log_freq", 1_000)
     while global_step < total_timesteps:
-        # Get actions for all environments in a single batch
-        actions, _ = agent.get_action(obs, deterministic=False)
-        
-        # Update action distribution counters (for debugging early bias)
-        if global_step < action_debug_steps:
-            # bincount over current parallel actions
-            counts = np.bincount(actions, minlength=num_actions)
-            action_counts[:len(counts)] += counts
-            if (global_step % action_log_freq) == 0 and use_wandb:
-                # Log the distribution to wandb and print
-                dist = {f"action/{i}": int(action_counts[i]) for i in range(num_actions)}
-                print(f"[ActionDebug] Step {global_step}: {dist}")
-                wandb.log({**dist, "debug/step": int(global_step)})
-        
-        # Step environment
-        next_obs, rewards, terminateds, truncateds, infos = env.step(actions)
-        dones = np.logical_or(terminateds, truncateds)
-        
-        # Store transitions
+        # Dreamer: train world model on real buffer before policy update
+        if hasattr(agent, "sequence_buffer") and agent.sequence_buffer.is_ready(agent.batch_size) and global_step % 10 == 0:
+            wm_metrics = agent.train_world_model()
+            if use_wandb:
+                wandb.log({f"wm/{k}": v for k, v in wm_metrics.items()}, step=global_step)
+
+        # Dreamer: imagine latent rollouts for policy update
+        if hasattr(agent, "world_model"):
+            actions, _ = agent.get_action(obs, deterministic=False)
+        else:
+            actions, _ = agent.get_action(obs, deterministic=False)
+
+        # Step vectorized environments with selected actions
+        try:
+            next_obs, rewards, terminated, truncated, infos = env.step(actions)
+        except Exception:
+            # Fallback for older gym versions returning (obs, rewards, dones, infos)
+            step_ret = env.step(actions)
+            if len(step_ret) == 4:
+                next_obs, rewards, dones, infos = step_ret
+                # expand dones to terminated/truncated
+                terminated = dones
+                truncated = [False] * len(dones)
+            else:
+                raise
+
+        # Store transitions into agent buffers (if supported)
+        try:
+            # actions may be numpy array or list
+            acts = np.array(actions)
+            for i_env in range(num_envs):
+                a = acts[i_env]
+                r = rewards[i_env]
+                ns = next_obs[i_env]
+                done = bool(terminated[i_env] or truncated[i_env])
+                # Some agents implement store_transition
+                if hasattr(agent, "store_transition"):
+                    try:
+                        agent.store_transition(obs[i_env], int(a), float(r), ns, done, i_env)
+                    except Exception:
+                        # ignore failures for agents that don't need per-step storage
+                        pass
+        except Exception:
+            # If stepping or storing fails, continue without crash
+            pass
+
+        # Per-environment episode handling
         for i in range(num_envs):
-            agent.store_transition(obs[i], actions[i], rewards[i], next_obs[i], dones[i])
+            # Accumulate rewards and lengths
             episode_rewards[i] += rewards[i]
             episode_lengths[i] += 1
             
-            # Episode finished
-            if dones[i]:
-                episode_count += 1
-                
-                # Log episode stats
+            # Check if episode ended
+            episode_ended = terminated[i] or truncated[i]
+            
+            if episode_ended:
                 metrics_logger.update({
                     "episode/reward": episode_rewards[i],
                     "episode/length": episode_lengths[i],
                 })
-                
                 # Check early stopping
-                should_stop = early_stopper.update(episode_rewards[i])
-                
-                if use_wandb:
-                    # Log per-episode metrics to Wandb without specifying `step`.
-                    # Let wandb assign a logical ordering to avoid non-monotonic
-                    # step warnings when other code logs with `global_step`.
+                should_stop = False
+                if early_stopper is not None:
+                    should_stop = early_stopper.update(episode_rewards[i])
+                if use_wandb and early_stopper is not None:
                     wandb.log({
                         "episode/reward": float(episode_rewards[i]),
                         "episode/length": int(episode_lengths[i]),
                         "episode/count": int(episode_count),
                         "episode/mean_reward_100": early_stopper.get_mean_reward(),
                     })
-                
                 if should_stop:
                     print(f"\n{'=' * 60}")
                     print(f"Early stopping triggered: {early_stopper.stop_reason}")
                     print(f"Final mean reward: {early_stopper.get_mean_reward():.2f}")
                     print(f"Total episodes: {episode_count}")
                     print(f"Total timesteps: {global_step:,}")
-                    
-                    # Save final checkpoint
                     save_path = f"{checkpoint_dir}/final_{algorithm}.pt"
                     agent.save(save_path)
                     print(f"Final model saved to {save_path}")
-                    
-                    # Log final video if available
                     if use_wandb:
                         video_path = find_latest_video(env_cfg.get("video_dir", "videos"))
                         if video_path:
                             wandb.log({"final_video": wandb.Video(video_path)})
-                    
                     env.close()
                     if use_wandb:
                         wandb.finish()
                     return early_stopper.get_mean_reward()
-                
-                # Reset episode stats
+                # Reset episode stats for ended episode
                 episode_rewards[i] = 0
                 episode_lengths[i] = 0
+                episode_count += 1
         
         # Update observation
         obs = next_obs
@@ -355,16 +381,26 @@ def train(config: Dict, args: argparse.Namespace) -> float:
         
         # Training updates
         if global_step >= learning_starts and global_step % train_freq == 0:
-            # Update agent
-            update_metrics = agent.update()
-            metrics_logger.update(update_metrics)
-            
-            # Debug: log first few updates to verify training is happening
-            if global_step <= learning_starts + 5000 and global_step % 100 == 0:
-                print(f"[Training] Step {global_step}: "
-                      f"policy_loss={update_metrics.get('policy/loss', 0):.4f}, "
-                      f"grad_norm={update_metrics.get('policy/grad_norm', 0):.4f}, "
-                      f"entropy={update_metrics.get('policy/entropy', 0):.4f}")
+            # Dreamer: latent policy update if sequence buffer present
+            if hasattr(agent, "sequence_buffer") and len(agent.sequence_buffer.buffer) > 0:
+                update_metrics = agent.update_latent_policy(batch_size=32)
+                metrics_logger.update(update_metrics)
+                if use_wandb:
+                    wandb.log({f"latent/{k}": v for k, v in update_metrics.items()}, step=global_step)
+                if global_step <= learning_starts + 5000 and global_step % 100 == 0:
+                    print(f"[Dreamer] Step {global_step}: "
+                          f"latent_policy_loss={update_metrics.get('latent_policy_loss', 0):.4f}, "
+                          f"latent_value_loss={update_metrics.get('latent_value_loss', 0):.4f}, "
+                          f"latent_entropy_loss={update_metrics.get('latent_entropy_loss', 0):.4f}")
+            else:
+                # Standard MBPO update
+                update_metrics = agent.update()
+                metrics_logger.update(update_metrics)
+                if global_step <= learning_starts + 5000 and global_step % 100 == 0:
+                    print(f"[Training] Step {global_step}: "
+                          f"policy_loss={update_metrics.get('policy/loss', 0):.4f}, "
+                          f"grad_norm={update_metrics.get('policy/grad_norm', 0):.4f}, "
+                          f"entropy={update_metrics.get('policy/entropy', 0):.4f}")
         
         # Model rollouts (for MBPO)
         if (algorithm == "mbpo" and 
@@ -401,12 +437,17 @@ def train(config: Dict, args: argparse.Namespace) -> float:
                 wandb.log(log_metrics, step=global_step)
             
             # Print progress
-            mean_reward = early_stopper.get_mean_reward()
+            if early_stopper is not None:
+                mean_reward = early_stopper.get_mean_reward()
+                best_reward = early_stopper.best_mean_reward
+            else:
+                mean_reward = 0.0
+                best_reward = 0.0
             print(
                 f"Step: {global_step:>10,} | "
                 f"Episodes: {episode_count:>6} | "
                 f"Mean Reward (100): {mean_reward:>7.2f} | "
-                f"Best: {early_stopper.best_mean_reward:>7.2f}"
+                f"Best: {best_reward:>7.2f}"
             )
         
         # Save checkpoint
@@ -441,7 +482,7 @@ def train(config: Dict, args: argparse.Namespace) -> float:
     if use_wandb:
         wandb.finish()
     
-    return early_stopper.get_mean_reward()
+    return early_stopper.get_mean_reward() if early_stopper is not None else 0.0
 
 
 def sweep_train() -> None:

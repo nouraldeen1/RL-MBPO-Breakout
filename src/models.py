@@ -1,24 +1,129 @@
-"""
-Neural Network Models for MBPO-Breakout
-=======================================
-
-This module contains the core neural network architectures:
-
-1. NatureCNN: The standard convolutional encoder from the Nature DQN paper
-2. PolicyNetwork: Actor network for action selection (supports discrete actions)
-3. ValueNetwork: Critic network for value estimation
-4. DynamicsModel: Single dynamics model predicting delta_state and reward
-5. DynamicsEnsemble: Ensemble of dynamics models (MBPO core component)
-
-The dynamics ensemble is crucial for MBPO as it:
-- Provides uncertainty estimation through disagreement
-- Reduces model bias through averaging
-- Enables better exploration through epistemic uncertainty
-
-Author: CMPS458 RL Project
-"""
 
 from __future__ import annotations
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.distributions import Categorical
+
+from utils import kl_divergence
+
+# =============================================================================
+# Dreamer World Model Components
+# =============================================================================
+
+class Encoder(nn.Module):
+    """
+    Encoder: CNN to latent vector z
+    """
+    def __init__(self, in_channels=4, latent_dim=1024):
+        super().__init__()
+        self.cnn = NatureCNN(in_channels=in_channels, fc_dim=latent_dim)
+    def forward(self, x):
+        return self.cnn(x)
+
+class RSSM(nn.Module):
+    """
+    Recurrent State-Space Model (RSSM): GRU for latent dynamics
+    """
+    def __init__(self, latent_dim=1024, action_dim=4, in_channels=4):
+        super().__init__()
+        self.encoder = Encoder(in_channels=in_channels, latent_dim=latent_dim)
+        self.rnn = nn.GRUCell(latent_dim + action_dim, latent_dim)
+        self.img_predictor = nn.Linear(latent_dim, latent_dim)
+        self.prior_mean = nn.Linear(latent_dim, latent_dim)
+        self.prior_logvar = nn.Linear(latent_dim, latent_dim)
+        self.post_mean = nn.Linear(latent_dim, latent_dim)
+        self.post_logvar = nn.Linear(latent_dim, latent_dim)
+    def forward(self, prev_latent, prev_action, prev_hidden):
+        # Concatenate latent and action
+        x = torch.cat([prev_latent, prev_action], dim=-1)
+        h = self.rnn(x, prev_hidden)
+        return h
+    def observe(self, h, action, obs):
+        z = self.encoder(obs)
+        h_next = self.rnn(torch.cat([z, action], dim=-1), h)
+        post_mean = self.post_mean(h_next)
+        post_logvar = self.post_logvar(h_next)
+        return z, (post_mean, post_logvar), h_next
+    def imagine(self, h, action):
+        z_prior = self.img_predictor(h)
+        h_next = self.rnn(torch.cat([z_prior, action], dim=-1), h)
+        prior_mean = self.prior_mean(h_next)
+        prior_logvar = self.prior_logvar(h_next)
+        return z_prior, (prior_mean, prior_logvar)
+    def forward(self, prev_latent, prev_action, prev_hidden):
+        # Concatenate latent and action
+        x = torch.cat([prev_latent, prev_action], dim=-1)
+        h = self.rnn(x, prev_hidden)
+        return h
+
+class Decoder(nn.Module):
+    """
+    Decoder: Deconv to reconstruct pixels from latent
+    """
+    def __init__(self, latent_dim=1024, out_channels=4):
+        super().__init__()
+        self.fc = nn.Linear(latent_dim, 3136)
+        self.deconv1 = nn.ConvTranspose2d(64, 64, 3, stride=1)
+        self.deconv2 = nn.ConvTranspose2d(64, 32, 4, stride=2)
+        self.deconv3 = nn.ConvTranspose2d(32, out_channels, 8, stride=4)
+    def forward(self, z):
+        # z: (batch, latent_dim)
+        x = F.relu(self.fc(z))
+        x = x.view(-1, 64, 7, 7)
+        x = F.relu(self.deconv1(x))
+        x = F.relu(self.deconv2(x))
+        x = torch.sigmoid(self.deconv3(x))
+        return x
+
+class WorldModel(nn.Module):
+    """
+    Dreamer-style World Model: Encoder, RSSM, Decoder, Reward Model
+    """
+    def __init__(self, in_channels=4, latent_dim=1024, action_dim=4):
+        super().__init__()
+        self.rssm = RSSM(latent_dim=latent_dim, action_dim=action_dim, in_channels=in_channels)
+        self.decoder = Decoder(latent_dim=latent_dim, out_channels=in_channels)
+        self.reward_model = nn.Linear(latent_dim, 1)
+        self.done_model = nn.Linear(latent_dim, 1)
+    def forward(self, obs, prev_action, prev_hidden):
+        z = self.rssm.encoder(obs)
+        h = self.rssm(z, prev_action, prev_hidden)
+        recon = self.decoder(h)
+        reward = self.reward_model(h)
+        done = torch.sigmoid(self.done_model(h))
+        return h, recon, reward, done
+
+    def compute_loss(self, seq_obs, seq_actions, seq_rewards, seq_dones):
+        """
+        Compute world model loss for a sequence.
+        seq_obs: (T, C, H, W)
+        seq_actions: (T, num_actions)
+        seq_rewards: (T,)
+        seq_dones: (T,)
+        """
+        T = seq_obs.shape[0]
+        h = torch.zeros(1, self.rssm.rnn.hidden_size, device=seq_obs.device)  # B=1
+
+        recon_loss = 0.0
+        reward_loss = 0.0
+        kl_loss = 0.0
+
+        for t in range(T - 1):
+            z_post, post_stats, h_next = self.rssm.observe(h, seq_actions[t:t+1], seq_obs[t+1:t+2])
+            z_prior, prior_stats = self.rssm.imagine(h, seq_actions[t:t+1])
+
+            recon = self.decoder(h_next)
+            recon_loss += F.mse_loss(recon, seq_obs[t+1:t+2])
+
+            pred_rew = self.reward_model(h_next)
+            reward_loss += F.mse_loss(pred_rew.squeeze(-1), seq_rewards[t:t+1])
+
+            kl_loss += kl_divergence(prior_stats[0], prior_stats[1], post_stats[0], post_stats[1])
+            h = h_next
+
+        return recon_loss, reward_loss, kl_loss
 
 import math
 from typing import Dict, List, Optional, Tuple, Union
